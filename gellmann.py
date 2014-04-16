@@ -46,5 +46,22 @@ def GellMann(K, J, d):
     else:
         return H(K, d)
 
-def gellmann(i, j, d):
+def gellmann(j, k, d):
+    """Returns a generalized Gell-Mann matrix of dimension d. According to the
+    convention in *Bloch Vectors for Qubits* by Bertlmann and Krammer (2008),
+    returns :math:`\Lambda^j` for :math:`1\leq j=k\leq d-1`,
+    :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`, and
+    :math:`\Lambda^{jk}_a` for :math:`1\leq j<k\leq d`.
+
+    :param j: First index for generalized Gell-Mann matrix
+    :type j:  positive integer
+    :param k: Second index for generalized Gell-Mann matrix
+    :type k:  positive integer
+    :param d: Dimension of the generalized Gell-Mann matrix
+    :type d:  positive integer
+    :returns: A genereralized Gell-Mann matrix.
+    :rtype:   numpy.array
+
+    """
+
     pass
