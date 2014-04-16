@@ -45,3 +45,6 @@ def GellMann(K, J, d):
             range(1, d + 1)])
     else:
         return H(K, d)
+
+def gellmann(i, j, d):
+    pass
