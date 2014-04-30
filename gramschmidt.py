@@ -26,15 +26,22 @@ def orthonormalize(A):
         for herm_comp, anti_comp, (j, k) in zip(hermitian_comps, antiherm_comps,
         ordering) ]
 
-    ordered_max_comps = sorted(enumerate(max_comps), key=lambda elem: elem[1])
+    # Ensure the identity is the first element in this list.
+    ordered_max_comps = [list(enumerate(max_comps))[-1]] + \
+        sorted(list(enumerate(max_comps))[0:-1], key=lambda elem: elem[1])
 
     discarded_indices = [ordered_max_comps[-1][0], ordered_max_comps[-2][0]]
 
     other_vectors = [ [ 0 if n != idx else 1 for n in range(d**2) ] for idx in
         range(d**2) if not idx in discarded_indices ]
 
-    basis = np.linalg.qr(np.array([other_vectors[-1], hermitian_comps,
-      antiherm_comps] + other_vectors[0:-1]).T.real)[0].T
+    vector_set = np.array([other_vectors[-1], hermitian_comps, antiherm_comps] +
+        other_vectors[0:-1]).T.real
+
+    basis, R = np.linalg.qr(vector_set)
+    basis = np.dot(basis, np.diag([ 1 if elem >= 0 else -1 for elem in
+      np.diag(R) ]))
+    basis = basis.T
 
     G_new = [ sum([ G[j - 1][k - 1]*coeff/sqrt(2) if j != d or k!= d else
         G[j - 1][k - 1]*coeff/sqrt(d) for coeff, (j, k) in
@@ -49,7 +56,3 @@ def orthonormalize(A):
     A_recon = A_coeffs[0]*G_new[0] + A_coeffs[1]*G_new[1] + A_coeffs[2]*G_new[2]
 
     return G_new
-
-    #TODO: Identify when identity, hermitian, and anti-hermitian components are
-    # not linearly independent.
-
