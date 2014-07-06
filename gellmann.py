@@ -8,15 +8,17 @@ import sympy as sp
 import numpy as np
 from numpy import sqrt
 
-def directsum(a, b):
+def directsum(mat_a, mat_b):
     """Calculate the direct sum of two sympy matrices
     """
 
-    ya, xa = a.shape
-    yb, xb = b.shape
-    return sp.Matrix([[ a[(m, n)] if (m < ya and n < xa) else (0 if (m < ya or
-        n < xa) else b[(m - ya, n - xa)]) for n in range(xa + xb)] for m in
-        range(ya + yb)])
+    rows_a, cols_a = mat_a.shape
+    rows_b, cols_b = mat_b.shape
+    return sp.Matrix([[mat_a[(m, n)] if (m < rows_a and n < cols_a) else
+                       (0 if (m < rows_a or n < cols_a) else
+                        b[(m - rows_a, n - cols_a)]) for n in
+                       range(cols_a + cols_b)] for m in range(rows_a +
+                                                              rows_b)])
 
 def H(K, d):
     """Calculate the diagonal generalized Gell-Mann matrices
@@ -26,7 +28,7 @@ def H(K, d):
         return sp.eye(d)
     elif K == d:
         return sp.sqrt(2/(d*(d - 1)))*directsum(H(1, d - 1),
-            sp.Matrix([[1 - d]]))
+                                                sp.Matrix([[1 - d]]))
     else:
         return directsum(H(K, d - 1), sp.Matrix([[0]]))
 
@@ -38,17 +40,18 @@ def GellMann(K, J, d):
     d = sp.S(d)
 
     if K < J:
-        return sp.Matrix([[ 1 if (j == J and k == K) or (k == J and j == K)
-            else 0 for j in range(1, d + 1) ] for k in range(1, d + 1)])
+        return sp.Matrix([[1 if (j == J and k == K) or (k == J and j == K)
+                           else 0 for j in range(1, d + 1)] for k in
+                          range(1, d + 1)])
     elif K > J:
-        return sp.Matrix([[ I if (j == J and k == K) else (-I if (k == J and
-            j == K) else 0) for j in range(1, d + 1) ] for k in
-            range(1, d + 1)])
+        return sp.Matrix([[I if (j == J and k == K) else
+                           (-I if (k == J and j == K) else 0) for j in
+                           range(1, d + 1)] for k in range(1, d + 1)])
     else:
         return H(K, d)
 
 def gellmann(j, k, d):
-    """Returns a generalized Gell-Mann matrix of dimension d. According to the
+    r"""Returns a generalized Gell-Mann matrix of dimension d. According to the
     convention in *Bloch Vectors for Qubits* by Bertlmann and Krammer (2008),
     returns :math:`\Lambda^j` for :math:`1\leq j=k\leq d-1`,
     :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`, and
@@ -72,11 +75,12 @@ def gellmann(j, k, d):
     elif k > j:
         gjkd = np.zeros((d, d), dtype=np.complex128)
         gjkd[j - 1][k - 1] = -1.j
-        gjkd[k - 1][j - 1] =  1.j
+        gjkd[k - 1][j - 1] = 1.j
     elif j == k and j < d:
-        gjkd = sqrt(2/(j*(j + 1)))*np.diag([ 1 + 0.j if n <= j else (-j + 0.j if
-            n == (j + 1) else 0 + 0.j) for n in range(1, d + 1) ])
+        gjkd = sqrt(2/(j*(j + 1)))*np.diag([1 + 0.j if n <= j else
+                                            (-1.j + 0.j if n == (j + 1) else 0 +
+                                             0.j) for n in range(1, d + 1)])
     else:
-        gjkd = np.diag([1 + 0.j for n in range(1, d + 1) ])
+        gjkd = np.diag([1 + 0.j for n in range(1, d + 1)])
 
     return gjkd
