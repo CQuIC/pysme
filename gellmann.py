@@ -78,7 +78,7 @@ def gellmann(j, k, d):
         gjkd[k - 1][j - 1] = 1.j
     elif j == k and j < d:
         gjkd = sqrt(2/(j*(j + 1)))*np.diag([1 + 0.j if n <= j else
-                                            (-1.j + 0.j if n == (j + 1) else 0 +
+                                            (-j + 0.j if n == (j + 1) else 0 +
                                              0.j) for n in range(1, d + 1)])
     else:
         gjkd = np.diag([1 + 0.j for n in range(1, d + 1)])
