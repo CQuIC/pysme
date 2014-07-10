@@ -1,6 +1,7 @@
-from nose.tools import assert_almost_equal
-import gellmann as gm
-import gramschmidt as gs
+from nose.tools import assert_almost_equal, assert_equal
+import pysme.gellmann as gm
+import pysme.gramschmidt as gs
+import pysme.system_builder as sb
 import numpy as np
 
 def check_orthogonal(A, B):
@@ -78,3 +79,59 @@ def test_gramschmidt():
                 else:
                     check_norm(basis[m], 1)
 
+def basis(n):
+    return [gm.gellmann(j, k, n) for j in range(1, n + 1) for k in
+            range(1, n + 1)]
+
+def check_trace_preservation():
+    """Make sure that the identity component of the density operator doesn't
+    evolve.
+    """
+
+    for dim in range(4):
+        for row in range(dim):
+            for col in range(dim):
+                c_op = np.zeros((dim, dim))
+                D_matrix = sb.diffusion_op(c_op, basis(dim))
+                for entry in D_matrix[dim - 1]:
+                    assert_equal(0, entry)
+    # TODO: Make reproducible random coupling operators for higher dimensions.
+
+def check_vectorize(operators, basis):
+    vectorizations = [sb.vectorize(operator, basis) for operator in operators]
+    reconstructions = [sum([coeff*basis_el for coeff, basis_el in
+                            zip(vectorization, basis)]) for vectorization in
+                       vectorizations]
+    for operator, reconstruction in zip(operators, reconstructions):
+        diff = reconstruction - operator
+        assert_almost_equal(np.trace(np.dot(diff.conj(), diff)), 0, 7)
+
+def test_system_builder():
+    check_trace_preservation()
+    c2_operators = [np.array([[0, 1],
+                              [0, 0]]),
+                    np.array([[0, 0],
+                              [1, 0]]),
+                    np.array([[1, 0],
+                              [0, -1]]),
+                    np.array([[0, 1],
+                              [1, 0]]),
+                    np.array([[0, -1.j],
+                              [1.j, 0]]),
+                    np.array([[1, 2],
+                              [3, 4]])]
+
+    c3_operators = [np.array([[0, 1, 0],
+                              [0, 0, 1],
+                              [0, 0, 0]]),
+                    np.array([[0, 0, 0],
+                              [1, 0, 0],
+                              [0, 1, 0]]),
+                    np.array([[1, 0, 0],
+                              [0, 0, 0],
+                              [0, 0, -1]]),
+                    np.array([[1, 2, 3],
+                              [4, 5, 6],
+                              [7, 8, 9]])]
+    check_vectorize(c2_operators, basis(2))
+    check_vectorize(c3_operators, basis(3))
