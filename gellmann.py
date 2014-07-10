@@ -16,7 +16,7 @@ def directsum(mat_a, mat_b):
     rows_b, cols_b = mat_b.shape
     return sp.Matrix([[mat_a[(m, n)] if (m < rows_a and n < cols_a) else
                        (0 if (m < rows_a or n < cols_a) else
-                        b[(m - rows_a, n - cols_a)]) for n in
+                        mat_b[(m - rows_a, n - cols_a)]) for n in
                        range(cols_a + cols_b)] for m in range(rows_a +
                                                               rows_b)])
 
@@ -44,8 +44,8 @@ def GellMann(K, J, d):
                            else 0 for j in range(1, d + 1)] for k in
                           range(1, d + 1)])
     elif K > J:
-        return sp.Matrix([[I if (j == J and k == K) else
-                           (-I if (k == J and j == K) else 0) for j in
+        return sp.Matrix([[sp.I if (j == J and k == K) else
+                           (-sp.I if (k == J and j == K) else 0) for j in
                            range(1, d + 1)] for k in range(1, d + 1)])
     else:
         return H(K, d)
