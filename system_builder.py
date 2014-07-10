@@ -8,7 +8,21 @@
 
 import numpy as np
 
-def diffusion_op(coupling_op, basis, sq_norm):
+def vectorize(operator, basis):
+    """Vectorize an operator in a particular operator basis.
+
+    :param operator:    The operator to vectorize
+    :type operator:     list(numpy.array)
+    :param basis:       The basis to vectorize the operator in
+    :type basis:        list(numpy.array)
+    :returns:           The vector components
+    :rtype:             list(complex)
+
+    """
+    return [np.trace(np.dot(basis_el.conj(), operator))/np.trace(
+            np.dot(basis_el.conj(), basis_el)) for basis_el in basis]
+
+def diffusion_op(coupling_op, basis):
     r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized
     :math:`d\rho=dt\,\mathcal{D}[c]\rho` can be calculated by
     :math:`d\overarrow{\rho}=dt\,D\overarrow{\rho}`. Vectorization is done
@@ -16,21 +30,19 @@ def diffusion_op(coupling_op, basis, sq_norm):
     
     :param coupling_op: The operator :math:`c` in matrix form
     :type coupling_op:  numpy.array
-    :param basis:       An almost complete (lacking identity), Hermitian,
-                        traceless, orthogonal basis for the operators
-    :type basis:        [numpy.array]
-    :param sq_norm:     The square norm of the basis elements
-    :type sq_norm:      Positive real number
+    :param basis:       A complete, Hermitian, traceless, orthogonal basis for
+                        the operators 
+    :type basis:        list(numpy.array)
     :returns:           The matrix :math:`D` operating on a vectorized density
                         operator
     :rtype:             numpy.array
+
     """
 
     dim = len(basis)
     D_matrix = np.zeros((dim, dim)) # The matrix to return
     # Vectorization of the coupling operator
-    C_vector = np.array([np.trace(np.dot(op, coupling_op))/sq_norm for
-                         op in basis])
+    C_vector = vectorize(coupling_op, basis)
     c_op_pairs = list(zip(C_vector, basis))
     # Construct lists of basis elements up to the current basis element for
     # doing the sum of the non-symmetric part of each element.
