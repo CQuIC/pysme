@@ -6,9 +6,10 @@
 """
 
 import numpy as np
+from scipy.integrate import odeint
 from pysme.system_builder import *
 
-def uncond_vac_integrate(rho_0, c_op, basis, dt, steps):
+def uncond_vac_integrate(rho_0, c_op, basis, times):
     """Integrate an unconditional vacuum master equation.
 
     :param rho_0:   The initial state of the system
@@ -17,16 +18,11 @@ def uncond_vac_integrate(rho_0, c_op, basis, dt, steps):
     :type c_op:     numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
     :type basis:    list(numpy.array)
-    :param dt:      The timestep size
-    :type dt:       real
-    :param steps:   The number of timesteps to integrate over
-    :type steps:    positive integer
+    :param times:   A sequence of time points for which to solve for rho
 
     """
-    rho_0_vec = np.array([[comp.real] for comp in vectorize(rho_0, basis)])
-    rho_vecs = [rho_0_vec]
+    rho_0_vec = [comp.real for comp in vectorize(rho_0, basis)]
     diff_mat = diffusion_op(c_op, basis)
-    for n in range(steps):
-        rho_vecs.append(rho_vecs[-1] + dt*np.dot(diff_mat, rho_vecs[-1]))
-
-    return rho_vecs
+    
+    return odeint(lambda rho_vec, t: np.dot(diff_mat, rho_vec), rho_0_vec,
+            times, Dfun=(lambda rho_vec, t: diff_mat))
