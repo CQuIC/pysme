@@ -1,6 +1,6 @@
 import numpy as np
 from itertools import product
-import gellmann as gm
+import pysme.gellmann as gm
 from numpy import sqrt
 
 def orthonormalize(A):
