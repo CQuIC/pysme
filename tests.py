@@ -115,7 +115,7 @@ def check_vectorize(operators, basis):
                        vectorizations]
     for operator, reconstruction in zip(operators, reconstructions):
         diff = reconstruction - operator
-        assert_almost_equal(np.trace(np.dot(diff.conj(), diff)), 0, 7)
+        assert_almost_equal(np.trace(np.dot(diff.conj().T, diff)), 0, 7)
 
 def test_system_builder():
     check_trace_preservation()
@@ -145,4 +145,11 @@ def test_system_builder():
                               [4, 5, 6],
                               [7, 8, 9]])]
     check_vectorize(c2_operators, basis(2))
+    orth_mat = 0.5*np.array([[1, 1, 1, 1],
+                             [1, 1, -1, -1],
+                             [1, -1, 1, -1],
+                             [1, -1, -1, 1]])
+    mixed_basis2 = [sum([entry*basis_el for entry, basis_el in
+                         zip(row, basis(2))]) for row in orth_mat]
+    check_vectorize(c2_operators, mixed_basis2)
     check_vectorize(c3_operators, basis(3))
