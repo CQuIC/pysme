@@ -88,14 +88,20 @@ def check_trace_preservation():
     evolve.
     """
 
-    for dim in range(4):
+    for dim in range(2, 3 + 1):
         for row in range(dim):
             for col in range(dim):
                 c_op = np.zeros((dim, dim))
                 D_matrix = sb.diffusion_op(c_op, basis(dim))
-                for entry in D_matrix[dim - 1]:
+                for entry in D_matrix[-1]:
                     assert_equal(0, entry)
-    # TODO: Make reproducible random coupling operators for higher dimensions.
+
+    for dim in range(2, 3 + 1):
+        np.random.seed(dim)
+        rand_c_op = np.random.randn(dim, dim) + 1.j*np.random.randn(dim, dim)
+        D_matrix = sb.diffusion_op(rand_c_op, basis(dim))
+        for entry in D_matrix[-1]:
+            assert_equal(0, entry)
 
 def check_vectorize(operators, basis):
     vectorizations = [sb.vectorize(operator, basis) for operator in operators]
