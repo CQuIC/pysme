@@ -30,8 +30,8 @@ def diffusion_op(coupling_op, basis):
     
     :param coupling_op: The operator :math:`c` in matrix form
     :type coupling_op:  numpy.array
-    :param basis:       A complete, Hermitian, traceless, orthogonal basis for
-                        the operators 
+    :param basis:       An almost complete (minus identity), Hermitian,
+                        traceless, orthogonal basis for the operators 
     :type basis:        list(numpy.array)
     :returns:           The matrix :math:`D` operating on a vectorized density
                         operator
@@ -39,11 +39,17 @@ def diffusion_op(coupling_op, basis):
 
     """
 
+    # Add the identity to the end of the basis to complete it (important for
+    # some tests for the identity to be the last basis element).
+    basis.append(np.eye(len(basis[0][0])))
+
     dim = len(basis)
     D_matrix = np.zeros((dim, dim)) # The matrix to return
+
     # Vectorization of the coupling operator
     C_vector = vectorize(coupling_op, basis)
     c_op_pairs = list(zip(C_vector, basis))
+
     # Construct lists of basis elements up to the current basis element for
     # doing the sum of the non-symmetric part of each element.
     part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]

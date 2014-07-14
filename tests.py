@@ -80,6 +80,11 @@ def test_gramschmidt():
                     check_norm(basis[m], 1)
 
 def basis(n):
+    """Return an orthogonal basis for n-by-n operators, with the identity in the
+    last position.
+
+    """
+
     return [gm.gellmann(j, k, n) for j in range(1, n + 1) for k in
             range(1, n + 1)]
 
@@ -92,14 +97,14 @@ def check_trace_preservation():
         for row in range(dim):
             for col in range(dim):
                 c_op = np.zeros((dim, dim))
-                D_matrix = sb.diffusion_op(c_op, basis(dim))
+                D_matrix = sb.diffusion_op(c_op, basis(dim)[:-1])
                 for entry in D_matrix[-1]:
                     assert_equal(0, entry)
 
     for dim in range(2, 3 + 1):
         np.random.seed(dim)
         rand_c_op = np.random.randn(dim, dim) + 1.j*np.random.randn(dim, dim)
-        D_matrix = sb.diffusion_op(rand_c_op, basis(dim))
+        D_matrix = sb.diffusion_op(rand_c_op, basis(dim)[:-1])
         for entry in D_matrix[-1]:
             assert_equal(0, entry)
 
