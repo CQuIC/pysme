@@ -4,6 +4,12 @@ import pysme.gellmann as gm
 from numpy import sqrt
 
 def orthonormalize(A):
+    """Return an orthonormal basis where A has support only on the first three
+    elements. The first element is guaranteed to be proportional to the
+    identity.
+
+    """
+
     d = max(A.shape) # Code won't currently work unless A is square.
     G = [ [ gm.gellmann(j, k, d) for k in range(1, d + 1) ] for j in
         range(1, d + 1) ]

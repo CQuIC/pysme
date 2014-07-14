@@ -50,13 +50,16 @@ def diffusion_op(coupling_op, basis):
     C_vector = vectorize(coupling_op, basis)
     c_op_pairs = list(zip(C_vector, basis))
 
+    # TODO: Write tests to catch the inappropriate use of conjugate() without T
+    # and then fix this to use conj().T.
+
     # Construct lists of basis elements up to the current basis element for
     # doing the sum of the non-symmetric part of each element.
     part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]
     c_op_part_triplets = list(zip(C_vector, basis, part_c_op_pairs))
     for row in range(dim):
         # Squate norm of basis element corresponding to current row
-        sqnorm = abs(np.trace(np.dot(basis[row].conjugate(), basis[row])))
+        sqnorm = abs(np.trace(np.dot(basis[row].conj().T, basis[row])))
         for col in range(dim):
             symm = sum([abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
                 np.dot(basis[col], op)) - 0.5*(np.dot(op, np.dot(op,
