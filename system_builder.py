@@ -19,8 +19,8 @@ def vectorize(operator, basis):
     :rtype:             list(complex)
 
     """
-    return [np.trace(np.dot(basis_el.conj(), operator))/np.trace(
-            np.dot(basis_el.conj(), basis_el)) for basis_el in basis]
+    return [np.trace(np.dot(basis_el.conj().T, operator))/np.trace(
+            np.dot(basis_el.conj().T, basis_el)) for basis_el in basis]
 
 def diffusion_op(coupling_op, basis):
     r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized
