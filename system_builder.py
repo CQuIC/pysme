@@ -55,16 +55,18 @@ def diffusion_op(coupling_op, basis):
     part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]
     c_op_part_triplets = list(zip(C_vector, basis, part_c_op_pairs))
     for row in range(dim):
+        # Squate norm of basis element corresponding to current row
+        sqnorm = abs(np.trace(np.dot(basis[row].conjugate(), basis[row])))
         for col in range(dim):
-            symm = 0.5*sum([abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
+            symm = sum([abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
                 np.dot(basis[col], op)) - 0.5*(np.dot(op, np.dot(op,
                 basis[col])) + np.dot(basis[col], np.dot(op, op))))) for c, op
-                in c_op_pairs]).real
-            non_symm =sum([c1*c2.conjugate()*np.trace(np.dot(basis[row],
+                in c_op_pairs]).real/sqnorm
+            non_symm = 2*sum([c1*c2.conjugate()*np.trace(np.dot(basis[row],
                 np.dot(op1, np.dot(basis[col], op2)) - 0.5*(np.dot(op2,
                 np.dot(op1, basis[col])) + np.dot(basis[col],
                 np.dot(op2, op1))))) for c1, op1, part_c_op_pair in
-                c_op_part_triplets for c2, op2 in part_c_op_pair]).real
+                c_op_part_triplets for c2, op2 in part_c_op_pair]).real/sqnorm
             D_matrix[row, col] = symm + non_symm
     
     return D_matrix
