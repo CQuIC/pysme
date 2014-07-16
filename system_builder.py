@@ -31,7 +31,8 @@ def diffusion_op(coupling_op, basis):
     :param coupling_op: The operator :math:`c` in matrix form
     :type coupling_op:  numpy.array
     :param basis:       An almost complete (minus identity), Hermitian,
-                        traceless, orthogonal basis for the operators 
+                        traceless, orthogonal basis for the operators (does not
+                        need to be normalized).
     :type basis:        list(numpy.array)
     :returns:           The matrix :math:`D` operating on a vectorized density
                         operator
