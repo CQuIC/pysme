@@ -23,10 +23,17 @@ def vectorize(operator, basis):
             np.dot(basis_el.conj().T, basis_el)) for basis_el in basis]
 
 def diffusion_op(coupling_op, basis):
-    r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized
-    :math:`d\rho=dt\,\mathcal{D}[c]\rho` can be calculated by
-    :math:`d\overarrow{\rho}=dt\,D\overarrow{\rho}`. Vectorization is done
-    according to the order prescribed in *basis*.
+    r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
+    expression
+
+    .. math::
+    
+        d\rho=dt\,\mathcal{D}[c]\rho=c\rho c^\dagger-
+        \frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)
+        
+    can be calculated by :math:`d\overarrow{\rho}=dt\,D\overarrow{\rho}`.
+    Vectorization is done according to the order prescribed in *basis*, with the
+    component proportional to identity in the last place.
     
     :param coupling_op: The operator :math:`c` in matrix form
     :type coupling_op:  numpy.array
@@ -52,14 +59,13 @@ def diffusion_op(coupling_op, basis):
     c_op_pairs = list(zip(C_vector, basis))
 
     # TODO: Write tests to catch the inappropriate use of conjugate() without T
-    # and then fix this to use conj().T.
 
     # Construct lists of basis elements up to the current basis element for
     # doing the sum of the non-symmetric part of each element.
     part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]
     c_op_part_triplets = list(zip(C_vector, basis, part_c_op_pairs))
     for row in range(dim):
-        # Squate norm of basis element corresponding to current row
+        # Square norm of basis element corresponding to current row
         sqnorm = abs(np.trace(np.dot(basis[row].conj().T, basis[row])))
         for col in range(dim):
             symm = sum([abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
@@ -74,3 +80,28 @@ def diffusion_op(coupling_op, basis):
             D_matrix[row, col] = symm + non_symm
     
     return D_matrix
+
+def double_comm_op(coupling_op, M_sq, basis):
+    r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
+    expression
+
+    .. math::
+    
+        d\rho=dt\,\frac{M^*}{2}[c,[c,\rho]]+
+        \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]
+        
+    can be calculated by :math:`d\overarrow{\rho}=dt\,D\overarrow{\rho}`.
+    Vectorization is done according to the order prescribed in *basis*, with the
+    component proportional to identity in the last place.
+    
+    :param coupling_op: The operator :math:`c` in matrix form
+    :type coupling_op:  numpy.array
+    :param basis:       An almost complete (minus identity), Hermitian,
+                        traceless, orthogonal basis for the operators (does not
+                        need to be normalized).
+    :type basis:        list(numpy.array)
+    :returns:           The matrix :math:`D` operating on a vectorized density
+                        operator
+    :rtype:             numpy.array
+
+    """
