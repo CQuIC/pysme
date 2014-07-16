@@ -1,7 +1,7 @@
 """
 .. module:: system_builder.py
    :synopsis: Build the matrix representation of the system of coupled
-   real-valued stochastic differential equations.
+              real-valued stochastic differential equations.
 .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
@@ -31,7 +31,7 @@ def diffusion_op(coupling_op, basis):
         d\rho=dt\,\mathcal{D}[c]\rho=c\rho c^\dagger-
         \frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)
         
-    can be calculated by :math:`d\overarrow{\rho}=dt\,D\overarrow{\rho}`.
+    can be calculated by :math:`d\vec{\rho}=dt\,D\vec{\rho}`.
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
@@ -87,10 +87,10 @@ def double_comm_op(coupling_op, M_sq, basis):
 
     .. math::
     
-        d\rho=dt\,\frac{M^*}{2}[c,[c,\rho]]+
-        \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]
+        d\rho=dt\,\left(\frac{M^*}{2}[c,[c,\rho]]+
+        \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]\right)
         
-    can be calculated by :math:`d\overarrow{\rho}=dt\,D\overarrow{\rho}`.
+    can be calculated by :math:`d\vec{\rho}=dt\,D\vec{\rho}`.
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
