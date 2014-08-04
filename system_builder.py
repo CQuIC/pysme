@@ -108,6 +108,8 @@ def diffusion_op(coupling_op, basis):
     return D_matrix
 
 # TODO: Formulate tests to verify correctness of this evolution.
+# TODO: Fix this function to compute matrix elements as described in the
+# Vectorization page in the documentation.
 def double_comm_op(coupling_op, M_sq, basis):
     r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
     expression

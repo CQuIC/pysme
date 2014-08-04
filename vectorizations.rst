@@ -20,7 +20,7 @@ generalized Gell--Mann matrices:
 
    \Lambda^{jk}=\begin{cases}
    |j\rangle\langle k|+|k\rangle\langle j|, & 1\leq k\lt j\leq d \\ \\
-   -i|j\rangle\langle k|+i|j\rangle\langle k|, & 1\leq j\lt k\leq d \\ \\
+   -i|j\rangle\langle k|+i|k\rangle\langle j|, & 1\leq j\lt k\leq d \\ \\
    \sqrt{\frac{2}{k(k+1)}}\left(\sum_{l=1}^k|l\rangle\langle l|-
    |k\rangle\langle k|\right), & 1\leq j=k\lt d \\ \\
    I, & j=k=d
@@ -42,23 +42,29 @@ manner:
 
 .. math::
 
+   \begin{align}
    \rho &=\sum_{j,k}\rho_{jk}\Lambda^{jk}, & \rho_{jk} &\in\mathbb{R} \\
    c &=\sum_{j,k}c_{jk}\Lambda^{jk}, & c_{jk} &\in\mathbb{C}
+   \end{align}
 
 We can write the unconditional vacuum master equation
-:math:`d\rho=c\rho c^\dagger-\frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)` as a
-system of coupled first-order ordinary differential equations:
+:math:`d\rho/dt=c\rho c^\dagger-\frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)`
+as a system of coupled first-order ordinary differential equations:
 
 .. math::
 
+   \begin{align}
    \operatorname{Tr}[\Lambda^{jk}\Lambda^{jk}]\frac{\mathrm{d}\rho_{jk}}
-   {\mathrm{d}t}=\sum_{p,q}\rho_{pq}\left(\sum_{m,n}|c_{mn}|^2\operatorname{Tr}
+   {\mathrm{d}t} &=\sum_{p,q}\rho_{pq}\left(\sum_{m,n}|c_{mn}|^2
+   \operatorname{Tr}
    \left[\Lambda^{jk}\left(\Lambda^{mn}\Lambda^{pq}\Lambda^{mn}-
    \frac{1}{2}(\Lambda^{mn}\Lambda^{mn}\Lambda^{pq}+\Lambda^{pq}\Lambda^{mn}
-   \Lambda^{mn})\right)\right]+\sum_{dm+n\lt dr+s}2\Re\left\{c_{mn}c_{rs}^*
+   \Lambda^{mn})\right)\right]+\right. \\
+   & \quad\left.\sum_{dm+n\lt dr+s}2\Re\left\{c_{mn}c_{rs}^*
    \operatorname{Tr}\left[\Lambda^{jk}\left(\Lambda^{mn}\Lambda^{pq}
    \Lambda^{rs}-\frac{1}{2}(\Lambda^{rs}\Lambda^{mn}\Lambda^{pq}+
    \Lambda^{pq}\Lambda^{rs}\Lambda^{mn})\right)\right]\right\}\right)
+   \end{align}
 
 This means I can write the vectorized version of the equation, using single
 indices :math:`w=dr+s`, :math:`x=dj+k`, :math:`y=dp+q`, and :math:`z=dm+n` for
@@ -72,9 +78,37 @@ The matrix :math:`D(\vec{c})` has entries:
 
 .. math::
 
-   D_{xy}(\vec{c})=(\operatorname{Tr}[\Lambda^x\Lambda^x])^{-1}\left(
+   \begin{align}
+   D_{xy}(\vec{c}) &=(\operatorname{Tr}[\Lambda^x\Lambda^x])^{-1}\left(
    \sum_z|c_z|^2\operatorname{Tr}[\Lambda^x(\Lambda^z\Lambda^y\Lambda^z-
-   \frac{1}{2}(\Lambda^z\Lambda^z\Lambda^y+\Lambda^y\Lambda^z\Lambda^z))]+
-   \sum_{z>w}2\Re\left\{c_z c_w^*\operatorname{Tr}[\Lambda^x(\Lambda^z\Lambda^y
-   \Lambda^w-\frac{1}{2}(\Lambda^w\Lambda^z\Lambda^y+
+   \frac{1}{2}(\Lambda^z\Lambda^z\Lambda^y+
+   \Lambda^y\Lambda^z\Lambda^z))]+\right. \\
+   & \quad\left.\sum_{z>w}2\Re\left\{c_z c_w^*\operatorname{Tr}[\Lambda^x(
+   \Lambda^z\Lambda^y\Lambda^w-\frac{1}{2}(\Lambda^w\Lambda^z\Lambda^y+
    \Lambda^y\Lambda^w\Lambda^z))]\right\}\right)
+   \end{align}
+
+In a similar way we can calculate:
+
+.. math::
+
+   \rho^\prime=\frac{M}{2}[c,[c,\rho]]+\frac{M^*}{2}[c^\dagger,[c^\dagger,\rho]]
+
+in the vectorized form:
+
+.. math::
+
+   \vec{\rho}^\prime=E(M,\vec{c})\vec{\rho}
+
+where :math:`E(M,\vec{c})` has entries:
+
+.. math::
+
+   \begin{align}
+   E_{xy}(M,\vec{c})&=\sum_{w<z}2\Re\{M^*c_wc_z\}\Re\{
+   \operatorname{Tr}[\Lambda^x(\Lambda^w\Lambda^z\Lambda^y+
+   \Lambda^y\Lambda^w\Lambda^z)-2\Lambda^x\Lambda^w\Lambda^y\Lambda^z]\})+ \\
+   &\quad\sum_w2\Re\{M^*c_w^2\}(\Re\{
+   \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^w\Lambda^y]\}-
+   \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^y\Lambda^w])
+   \end{align}
