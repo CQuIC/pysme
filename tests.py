@@ -88,9 +88,13 @@ def basis(n):
     return [gm.gellmann(j, k, n) for j in range(1, n + 1) for k in
             range(1, n + 1)]
 
-def check_trace_preservation():
+def check_trace_preservation(supop_builder):
     """Make sure that the identity component of the density operator doesn't
     evolve.
+
+    :param supop_builder:   Function that takes a coupling op and basis (minus
+                            identity) as arguments and returns the appropriate
+                            matrix
     """
 
     for dim in range(2, 3 + 1):
@@ -98,7 +102,7 @@ def check_trace_preservation():
             for col in range(dim):
                 # Couple using all the different Gell-Mann matrices
                 c_op = gm.gellmann(row + 1, col + 1, dim)
-                D_matrix = sb.diffusion_op(c_op, basis(dim)[:-1])
+                D_matrix = supop_builder(c_op, basis(dim)[:-1])
                 for entry in D_matrix[-1]:
                     assert_equal(0, entry)
 
@@ -120,7 +124,10 @@ def check_vectorize(operators, basis):
         assert_almost_equal(np.trace(np.dot(diff.conj().T, diff)), 0, 7)
 
 def test_system_builder():
-    check_trace_preservation()
+    check_trace_preservation(sb.diffusion_op)
+    squeezing_params = [1, 1.j, -1, -1.j]
+    for M in squeezing_params:
+        check_trace_preservation(lambda c, b: sb.double_comm_op(c, M, b))
     c2_operators = [np.array([[0, 1],
                               [0, 0]]),
                     np.array([[0, 0],
@@ -147,6 +154,8 @@ def test_system_builder():
                               [4, 5, 6],
                               [7, 8, 9]])]
     check_vectorize(c2_operators, basis(2))
+    # Check vectorization of a mixing of the basis vectors (designed to catch a
+    # previous error in calculating normalization)
     orth_mat = 0.5*np.array([[1, 1, 1, 1],
                              [1, 1, -1, -1],
                              [1, -1, 1, -1],
