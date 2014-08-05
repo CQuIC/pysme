@@ -48,6 +48,25 @@ def vectorize(operator, basis):
     return [np.trace(np.dot(basis_el.conj().T, operator))/np.trace(
             np.dot(basis_el.conj().T, basis_el)) for basis_el in basis]
 
+def op_calc_setup(coupling_op, basis):
+    """Handle the repeated tasks performed every time a superoperator matrix is
+    computed.
+
+    """
+
+    # Add the identity to the end of the basis to complete it (important for
+    # some tests for the identity to be the last basis element).
+    basis.append(np.eye(len(basis[0][0])))
+
+    dim = len(basis)
+    supop_matrix = np.zeros((dim, dim)) # The matrix to return
+
+    # Vectorization of the coupling operator
+    C_vector = vectorize(coupling_op, basis)
+    c_op_pairs = list(zip(C_vector, basis))
+
+    return dim, supop_matrix, C_vector, c_op_pairs
+
 def diffusion_op(coupling_op, basis):
     r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
     expression
@@ -73,16 +92,7 @@ def diffusion_op(coupling_op, basis):
 
     """
 
-    # Add the identity to the end of the basis to complete it (important for
-    # some tests for the identity to be the last basis element).
-    basis.append(np.eye(len(basis[0][0])))
-
-    dim = len(basis)
-    D_matrix = np.zeros((dim, dim)) # The matrix to return
-
-    # Vectorization of the coupling operator
-    C_vector = vectorize(coupling_op, basis)
-    c_op_pairs = list(zip(C_vector, basis))
+    dim, D_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
 
     # TODO: Write tests to catch the inappropriate use of conjugate() without T
 
@@ -94,16 +104,17 @@ def diffusion_op(coupling_op, basis):
         # Square norm of basis element corresponding to current row
         sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            symm = sum([abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
+            symm_addends = [abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
                 np.dot(basis[col], op)) - 0.5*(np.dot(op, np.dot(op,
                 basis[col])) + np.dot(basis[col], np.dot(op, op))))) for c, op
-                in c_op_pairs]).real/sqnorm
-            non_symm = 2*sum([c1*c2.conjugate()*np.trace(np.dot(basis[row],
+                in c_op_pairs]
+            non_symm_addends = [c1*c2.conjugate()*np.trace(np.dot(basis[row],
                 np.dot(op1, np.dot(basis[col], op2)) - 0.5*(np.dot(op2,
                 np.dot(op1, basis[col])) + np.dot(basis[col],
                 np.dot(op2, op1))))) for c1, op1, part_c_op_pair in
-                c_op_part_triplets for c2, op2 in part_c_op_pair]).real/sqnorm
-            D_matrix[row, col] = symm + non_symm
+                c_op_part_triplets for c2, op2 in part_c_op_pair]
+            D_matrix[row, col] = (sum(symm_addends).real + 
+                                  2*sum(non_symm_addends).real)/sqnorm
     
     return D_matrix
 
@@ -111,7 +122,7 @@ def diffusion_op(coupling_op, basis):
 # TODO: Fix this function to compute matrix elements as described in the
 # Vectorization page in the documentation.
 def double_comm_op(coupling_op, M_sq, basis):
-    r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
+    r"""Return a matrix :math:`E` such that when :math:`\rho` is vectorized the
     expression
 
     .. math::
@@ -119,7 +130,7 @@ def double_comm_op(coupling_op, M_sq, basis):
         d\rho=dt\,\left(\frac{M^*}{2}[c,[c,\rho]]+
         \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]\right)
         
-    can be calculated by :math:`d\vec{\rho}=dt\,D\vec{\rho}`.
+    can be calculated by :math:`d\vec{\rho}=dt\,E\vec{\rho}`.
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
@@ -127,36 +138,37 @@ def double_comm_op(coupling_op, M_sq, basis):
     :type coupling_op:  numpy.array
     :param M_sq:        Complex squeezing parameter :math:`M` defined by
                         :math:`\langle dB(t)dB(t)\rangle=Mdt`.
-    :type M_sq:         Complex
+    :type M_sq:         complex
     :param basis:       An almost complete (minus identity), Hermitian,
                         traceless, orthogonal basis for the operators (does not
                         need to be normalized).
     :type basis:        list(numpy.array)
-    :returns:           The matrix :math:`D` operating on a vectorized density
+    :returns:           The matrix :math:`E` operating on a vectorized density
                         operator
     :rtype:             numpy.array
 
     """
 
-    # Add the identity to the end of the basis to complete it (important for
-    # some tests for the identity to be the last basis element).
-    basis.append(np.eye(len(basis[0][0])))
+    dim, E_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
 
-    dim = len(basis)
-    D_matrix = np.zeros((dim, dim)) # The matrix to return
-
-    # Vectorization of the coupling operator
-    C_vector = vectorize(coupling_op, basis)
-    c_op_pairs = list(zip(C_vector, basis))
-
+    # Construct lists of basis elements up to the current basis element for
+    # doing the sum of the non-symmetric part of each element.
+    part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]
+    c_op_part_triplets = list(zip(C_vector, basis, part_c_op_pairs))
     for row in range(dim):
         sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            addends = [c1*c2*(np.trace(recur_dot([basis[row], op1, op2,
-                                                  basis[col]])).real - 
-                              np.trace(recur_dot([basis[row], op1, basis[col],
-                                                  op2]))) for (c1, op1),
-                       (c2, op2) in product(c_op_pairs, c_op_pairs)]
-            D_matrix[row, col] = 2*(M_sq*sum(addends)).real/sqnorm
+            symm_addends = [(M_sq.conjugate()*c*c).real*(np.trace(
+                recur_dot([basis[row], op, op, basis[col]]) -
+                recur_dot([basis[row], op, basis[col], op]))).real for c, op
+                in c_op_pairs]
+            non_symm_addends = [(M_sq.conjugate()*c1*c2).real*(np.trace(
+                np.dot(basis[row], recur_dot([op2, op1, basis[col]]) +
+                       recur_dot([basis[col], op2, op1]) -
+                       2*recur_dot([op2, basis[col], op1]))).real) for c1, op1,
+                part_c_op_pair in c_op_part_triplets for c2, op2 in
+                part_c_op_pair]
+            E_matrix[row, col] = 2*(sum(symm_addends) +
+                                    sum(non_symm_addends))/sqnorm
 
-    return D_matrix
+    return E_matrix
