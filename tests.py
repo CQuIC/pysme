@@ -96,13 +96,15 @@ def check_trace_preservation():
     for dim in range(2, 3 + 1):
         for row in range(dim):
             for col in range(dim):
-                c_op = np.zeros((dim, dim))
+                # Couple using all the different Gell-Mann matrices
+                c_op = gm.gellmann(row + 1, col + 1, dim)
                 D_matrix = sb.diffusion_op(c_op, basis(dim)[:-1])
                 for entry in D_matrix[-1]:
                     assert_equal(0, entry)
 
     for dim in range(2, 3 + 1):
         np.random.seed(dim)
+        # Couple using random matrices
         rand_c_op = np.random.randn(dim, dim) + 1.j*np.random.randn(dim, dim)
         D_matrix = sb.diffusion_op(rand_c_op, basis(dim)[:-1])
         for entry in D_matrix[-1]:
