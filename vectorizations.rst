@@ -105,10 +105,12 @@ where :math:`E(M,\vec{c})` has entries:
 .. math::
 
    \begin{align}
-   E_{xy}(M,\vec{c})&=\sum_{w<z}2\Re\{M^*c_wc_z\}\Re\{
+   E_{xy}(M,\vec{c})&=2(\operatorname{Tr}[\Lambda^x\Lambda^x])^{-1}
+   \left(\sum_{w<z}\Re\{M^*c_wc_z\}\Re\{
    \operatorname{Tr}[\Lambda^x(\Lambda^w\Lambda^z\Lambda^y+
-   \Lambda^y\Lambda^w\Lambda^z)-2\Lambda^x\Lambda^w\Lambda^y\Lambda^z]\})+ \\
-   &\quad\sum_w2\Re\{M^*c_w^2\}(\Re\{
+   \Lambda^y\Lambda^w\Lambda^z)-
+   2\Lambda^x\Lambda^w\Lambda^y\Lambda^z]\})+\right. \\
+   &\quad\left.\sum_w\Re\{M^*c_w^2\}(\Re\{
    \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^w\Lambda^y]\}-
-   \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^y\Lambda^w])
+   \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^y\Lambda^w])\right)
    \end{align}
