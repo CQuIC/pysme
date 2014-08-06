@@ -115,7 +115,7 @@ def diffusion_op(coupling_op, basis):
                 c_op_part_triplets for c2, op2 in part_c_op_pair]
             D_matrix[row, col] = (sum(symm_addends).real + 
                                   2*sum(non_symm_addends).real)/sqnorm
-    
+
     return D_matrix
 
 # TODO: Formulate tests to verify correctness of this evolution.
@@ -172,3 +172,40 @@ def double_comm_op(coupling_op, M_sq, basis):
                                     sum(non_symm_addends))/sqnorm
 
     return E_matrix
+
+def hamiltonian_op(hamiltonian, basis):
+    r"""Return a matrix :math:`F` such that when :math:`\rho` is vectorized the
+    epression
+
+    .. math::
+
+       d\rho=-i[H,\rho]dt
+
+    can be calculated by :math:`d\vec{\rho}=dt\,F\vec{\rho}`.
+    Vectorization is done according to the order prescribed in *basis*, with the
+    component proportional to identity in the last place.
+    
+    :param hamiltonian: The Hamiltonian :math:`H` in matrix form
+    :type hamiltonian:  numpy.array
+    :param basis:       An almost complete (minus identity), Hermitian,
+                        traceless, orthogonal basis for the operators (does not
+                        need to be normalized).
+    :type basis:        list(numpy.array)
+    :returns:           The matrix :math:`F` operating on a vectorized density
+                        operator
+    :rtype:             numpy.array
+
+    """
+
+    dim, F_matrix, H_vector, h_op_pairs = op_calc_setup(hamiltonian, basis)
+
+    for row in range(dim):
+        # Square norm of basis element corresponding to current row
+        sqnorm = norm_squared(basis[row])
+        for col in range(dim):
+            addends = [h.real*(np.trace(np.dot(basis[row],
+                np.dot(op, basis[col]) - np.dot(basis[col], op))).imag) for h,
+                op in h_op_pairs]
+            F_matrix[row, col] = sum(addends)/sqnorm
+
+    return F_matrix
