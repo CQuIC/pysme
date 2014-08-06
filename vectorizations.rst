@@ -47,6 +47,9 @@ manner:
    c &=\sum_{j,k}c_{jk}\Lambda^{jk}, & c_{jk} &\in\mathbb{C}
    \end{align}
 
+Matrix representations of superoperators
+----------------------------------------
+
 We can write the unconditional vacuum master equation
 :math:`d\rho/dt=c\rho c^\dagger-\frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)`
 as a system of coupled first-order ordinary differential equations:
@@ -109,8 +112,35 @@ where :math:`E(M,\vec{c})` has entries:
    \left(\sum_{w<z}\Re\{M^*c_wc_z\}\Re\{
    \operatorname{Tr}[\Lambda^x(\Lambda^w\Lambda^z\Lambda^y+
    \Lambda^y\Lambda^w\Lambda^z)-
-   2\Lambda^x\Lambda^w\Lambda^y\Lambda^z]\})+\right. \\
+   2\Lambda^x\Lambda^w\Lambda^y\Lambda^z]\}+\right. \\
    &\quad\left.\sum_w\Re\{M^*c_w^2\}(\Re\{
    \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^w\Lambda^y]\}-
    \operatorname{Tr}[\Lambda^x\Lambda^w\Lambda^y\Lambda^w])\right)
    \end{align}
+
+If I vectorize the plant Hamiltonian:
+
+.. math::
+
+   \begin{align}
+   H&=\sum_zh_z\Lambda^z,&h_z&\in\mathbb{R}
+   \end{align}
+
+I can then calculate:
+
+.. math::
+
+   \frac{d\rho}{dt}=-i[H,\rho]
+
+in the vectorized form:
+
+.. math::
+
+   \frac{d\vec{\rho}}{dt}=F(\vec{h})\vec{\rho}
+
+where :math:`F(\vec{h})` has entries:
+
+.. math::
+
+   F_{x,y}(\vec{h})=\sum_zh_z\,\Im\left\{\operatorname{Tr}[\Lambda^x(
+   \Lambda^z\Lambda^y-\Lambda^y\Lambda^z)]\right\}
