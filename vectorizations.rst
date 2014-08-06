@@ -142,5 +142,6 @@ where :math:`F(\vec{h})` has entries:
 
 .. math::
 
-   F_{x,y}(\vec{h})=\sum_zh_z\,\Im\left\{\operatorname{Tr}[\Lambda^x(
-   \Lambda^z\Lambda^y-\Lambda^y\Lambda^z)]\right\}
+   F_{x,y}(\vec{h})=(\operatorname{Tr}[\Lambda^x\Lambda^x])^{-1}\sum_zh_z\,
+   \Im\left\{\operatorname{Tr}[\Lambda^x(\Lambda^z\Lambda^y-
+   \Lambda^y\Lambda^z)]\right\}
