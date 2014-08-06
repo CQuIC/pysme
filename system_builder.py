@@ -175,7 +175,7 @@ def double_comm_op(coupling_op, M_sq, basis):
 
 def hamiltonian_op(hamiltonian, basis):
     r"""Return a matrix :math:`F` such that when :math:`\rho` is vectorized the
-    epression
+    expression
 
     .. math::
 
