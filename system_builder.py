@@ -45,8 +45,8 @@ def vectorize(operator, basis):
     :rtype:             list(complex)
 
     """
-    return [np.trace(np.dot(basis_el.conj().T, operator))/np.trace(
-            np.dot(basis_el.conj().T, basis_el)) for basis_el in basis]
+    return [np.trace(np.dot(basis_el.conj().T, operator))/
+            norm_squared(basis_el) for basis_el in basis]
 
 def op_calc_setup(coupling_op, basis):
     """Handle the repeated tasks performed every time a superoperator matrix is
