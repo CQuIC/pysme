@@ -145,3 +145,28 @@ where :math:`F(\vec{h})` has entries:
    F_{x,y}(\vec{h})=(\operatorname{Tr}[\Lambda^x\Lambda^x])^{-1}\sum_zh_z\,
    \Im\left\{\operatorname{Tr}[\Lambda^x(\Lambda^z\Lambda^y-
    \Lambda^y\Lambda^z)]\right\}
+
+Nonlinear superoperator representation
+--------------------------------------
+
+The stochastic expression:
+
+.. math::
+
+   d\rho=dW\,(c\rho+\rho c^\dagger-\rho\operatorname{Tr}[(c+c^\dagger)\rho])
+
+can be calculated:
+
+.. math::
+
+   d\vec{\rho}=dW(G+\vec{k}\cdot\vec{\rho})\vec{\rho}
+
+where we define:
+
+.. math::
+
+   \begin{align}
+   G_{x,y}&=2\left(\operatorname{Tr}[\Lambda^x\Lambda^x]\right)^{-1}\sum_z
+   \Re\left\{c_z\operatorname{Tr}[\Lambda^x\Lambda^z\Lambda^y]\right\} \\
+   k_x&=-2\Re\{c_x\}\operatorname{Tr}[\Lambda^y\Lambda^y]
+   \end{align}
