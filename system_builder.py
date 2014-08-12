@@ -72,11 +72,16 @@ def diffusion_op(coupling_op, basis):
     expression
 
     .. math::
-    
-        d\rho=dt\,\mathcal{D}[c]\rho=c\rho c^\dagger-
-        \frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)
-        
-    can be calculated by :math:`d\vec{\rho}=dt\,D\vec{\rho}`.
+
+       \frac{d\rho}{dt}=\mathcal{D}[c]\rho=c\rho c^\dagger-
+       \frac{1}{2}(c^\dagger c\rho+\rho c^\dagger c)
+
+    can be calculated by:
+
+    .. math::
+
+       \frac{d\vec{\rho}}{dt}=D\vec{\rho}
+
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
@@ -127,10 +132,15 @@ def double_comm_op(coupling_op, M_sq, basis):
 
     .. math::
     
-        d\rho=dt\,\left(\frac{M^*}{2}[c,[c,\rho]]+
-        \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]\right)
+       \frac{d\rho}{dt}=\left(\frac{M^*}{2}[c,[c,\rho]]+
+       \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]\right)
         
-    can be calculated by :math:`d\vec{\rho}=dt\,E\vec{\rho}`.
+    can be calculated by:
+
+    .. math::
+
+       \frac{d\vec{\rho}}{dt}=E\vec{\rho}
+
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
@@ -179,9 +189,14 @@ def hamiltonian_op(hamiltonian, basis):
 
     .. math::
 
-       d\rho=-i[H,\rho]dt
+       \frac{d\rho}{dt}=-i[H,\rho]
 
-    can be calculated by :math:`d\vec{\rho}=dt\,F\vec{\rho}`.
+    can be calculated by:
+
+    .. math::
+
+       \frac{d\vec{\rho}}{dt}=F\vec{\rho}
+
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
@@ -215,12 +230,12 @@ def weiner_op(coupling_op, basis):
     is vectorized the expression
 
     .. math::
-    
+
         d\rho=dW\,\left(c\rho+\rho c^\dagger-
         \rho\operatorname{Tr}[(c+c^\dagger)\rho]\right)
-        
+
     can be calculated by:
-    
+
     .. math::
 
         d\vec{\rho}=dW\,(G_L+\operatorname{diag}(\vec{\rho})G_Q)\vec{\rho}
