@@ -13,6 +13,7 @@ Contents:
 
    documentation
    vectorizations
+   sme_integration
 
 
 
