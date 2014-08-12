@@ -226,8 +226,8 @@ def hamiltonian_op(hamiltonian, basis):
     return F_matrix
 
 def weiner_op(coupling_op, basis):
-    r"""Return a pair of matrices :math:`(G_L,G_Q)` such that when :math:`\rho`
-    is vectorized the expression
+    r"""Return a the matrix-vector pair :math:`(G,\vec{k})` such that when
+    :math:`\rho` is vectorized the expression
 
     .. math::
 
@@ -238,9 +238,7 @@ def weiner_op(coupling_op, basis):
 
     .. math::
 
-        d\vec{\rho}=dW\,(G_L+\operatorname{diag}(\vec{\rho})G_Q)\vec{\rho}
-
-    where :math:`\operatorname{diag}()` creates a diagonal matrix from a vector.
+        d\vec{\rho}=dW\,(G+\vec{k}\cdot\vec{\rho})\vec{\rho}
 
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
@@ -251,22 +249,21 @@ def weiner_op(coupling_op, basis):
                         traceless, orthogonal basis for the operators (does not
                         need to be normalized).
     :type basis:        list(numpy.array)
-    :returns:           The pair of matrices :math:`(G_L,G_Q)` operating on a
-                        vectorized density operator
+    :returns:           The matrix-vector pair :math:`(G,\vec{k})` operating on
+                        a vectorized density operator
     :rtype:             tuple(numpy.array)
 
     """
 
-    dim, GL_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
-    GQ_matrix = np.zeros((dim, dim))
+    dim, G_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
+    k_vec = np.zeros(dim)
 
     for row in range(dim):
         sqnorm = norm_squared(basis[row])
+        k_vec[row] = -2*C_vector[row].real*norm_squared(basis[row])
         for col in range(dim):
-            GL_addends = [(c*np.trace(recur_dot([basis[row], op,
+            G_addends = [(c*np.trace(recur_dot([basis[row], op,
                                                  basis[col]]))).real for c,
                           op in c_op_pairs]
-            GL_matrix[row, col] = 2*sum(GL_addends)/sqnorm
-            GQ_matrix[row, col] = -2*C_vector[col].real*norm_squared(basis[col])
-
-    return GL_matrix, GQ_matrix
+            G_matrix[row, col] = 2*sum(G_addends)/sqnorm
+    return G_matrix, k_vec
