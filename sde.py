@@ -1,6 +1,6 @@
 """
-.. module:: integrate.py
-   :synopsis: Integrate stochastic master equations in vectorized form.
+.. module:: sde.py
+   :synopsis: Numerical integration techniques
 .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
@@ -8,7 +8,7 @@
 import numpy as np
 
 def milstein(drift, diffusion, diffusion_prime, X0, ts, dws):
-    """Integrate a system of ordinary stochastic differential equations:
+    r"""Integrate a system of ordinary stochastic differential equations:
 
     .. math::
 
@@ -26,7 +26,9 @@ def milstein(drift, diffusion, diffusion_prime, X0, ts, dws):
     :type drift:            callable(X, t0)
     :param diffusion:       Computes the diffusion term :math:`b(t,X)` at t0
     :type diffusion:        callable(X, t0)
-    :param diffusion_prime: Computes the diffusion term :math:`b(t,X)` at t0
+    :param diffusion_prime: Computes the diffusion term :math:`b_X(t,X)` at t0
+                            (for systems of equations computes
+                            :math:`\vec{\nabla}_{\vec{X}}\cdot\vec{b}`
     :type diffusion_prime:  callable(X, t0)
     :param X0:              Initial condition on X (can be a vector)
     :type X0:               array
