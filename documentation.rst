@@ -28,3 +28,10 @@ integrate
 .. automodule:: integrate
    :synopsis:
    :members:
+
+sde
+---
+
+.. automodule:: sde
+   :synopsis:
+   :members:
