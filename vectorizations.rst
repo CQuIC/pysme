@@ -19,10 +19,10 @@ generalized Gell--Mann matrices:
 .. math::
 
    \Lambda^{jk}=\begin{cases}
-   |j\rangle\langle k|+|k\rangle\langle j|, & 1\leq k\lt j\leq d \\ \\
-   -i|j\rangle\langle k|+i|k\rangle\langle j|, & 1\leq j\lt k\leq d \\ \\
+   |j\rangle\langle k|+|k\rangle\langle j|, & 1\leq k<j\leq d \\ \\
+   -i|j\rangle\langle k|+i|k\rangle\langle j|, & 1\leq j<k\leq d \\ \\
    \sqrt{\frac{2}{k(k+1)}}\left(\sum_{l=1}^k|l\rangle\langle l|-
-   |k\rangle\langle k|\right), & 1\leq j=k\lt d \\ \\
+   |k\rangle\langle k|\right), & 1\leq j=k<d \\ \\
    I, & j=k=d
    \end{cases}
 
@@ -63,7 +63,7 @@ as a system of coupled first-order ordinary differential equations:
    \left[\Lambda^{jk}\left(\Lambda^{mn}\Lambda^{pq}\Lambda^{mn}-
    \frac{1}{2}(\Lambda^{mn}\Lambda^{mn}\Lambda^{pq}+\Lambda^{pq}\Lambda^{mn}
    \Lambda^{mn})\right)\right]+\right. \\
-   & \quad\left.\sum_{dm+n\lt dr+s}2\Re\left\{c_{mn}c_{rs}^*
+   & \quad\left.\sum_{dm+n<dr+s}2\Re\left\{c_{mn}c_{rs}^*
    \operatorname{Tr}\left[\Lambda^{jk}\left(\Lambda^{mn}\Lambda^{pq}
    \Lambda^{rs}-\frac{1}{2}(\Lambda^{rs}\Lambda^{mn}\Lambda^{pq}+
    \Lambda^{pq}\Lambda^{rs}\Lambda^{mn})\right)\right]\right\}\right)
