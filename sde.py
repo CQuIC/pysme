@@ -8,34 +8,37 @@
 import numpy as np
 
 def milstein(drift, diffusion, diffusion_prime, X0, ts, dws):
-    r"""Integrate a system of ordinary stochastic differential equations:
+    r"""Integrate a system of ordinary stochastic differential equations subject
+    to scalar noise:
 
     .. math::
 
-        d\vec{X}=a(X,t)\,dt+b(X,t)\,dW_t
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,dW_t
 
     Uses the Milstein method:
 
     .. math::
 
-        w_{i+1}=w_i+a(w_i,t_i)\Delta t_i+b(w_i,t_i)\Delta W_i+
-        \frac{1}{2}b(w_i,t_i)\frac{\partial b}{\partial X}(w_i,t_i)
-        ((\Delta W_i)^2-\Delta t_i)
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       vec{b}(\vec{X}_i,t_i)\Delta W_i+
+       \frac{1}{2}\left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
+       \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
 
-    :param drift:           Computes the drift term :math:`a(t,X)` at t0
-    :type drift:            callable(X, t0)
-    :param diffusion:       Computes the diffusion term :math:`b(t,X)` at t0
-    :type diffusion:        callable(X, t0)
-    :param diffusion_prime: Computes the diffusion term :math:`b_X(t,X)` at t0
-                            (for systems of equations computes
-                            :math:`\vec{\nabla}_{\vec{X}}\cdot\vec{b}`
-    :type diffusion_prime:  callable(X, t0)
-    :param X0:              Initial condition on X (can be a vector)
+    :param drift:           Computes the drift coefficient
+                            :math:`\vec{a}(\vec{X},t)`
+    :type drift:            callable(X, t)
+    :param diffusion:       Computes the diffusion coefficient
+                            :math:`\vec{b}(\vec{X},t)` at t0
+    :type diffusion:        callable(X, t)
+    :param bx_dx_b:         Computes the correction coefficient
+                            :math:`\left(\vec{b}(\vec{X},t)\cdot
+                            \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
+    :type diffusion_prime:  callable(X, t)
+    :param X0:              Initial condition on X
     :type X0:               array
     :param ts:              A sequence of time points for which to solve for y.
-                            The
-                            initial value point should be the first element of
-                            this sequence.
+                            The initial value point should be the first element
+                            of this sequence.
     :type ts:               array
     :param dws:             Normalized Weiner increments for each time step
                             (i.e. samples from a Gaussian distribution with mean
@@ -56,7 +59,7 @@ def milstein(drift, diffusion, diffusion_prime, X0, ts, dws):
     X = [np.array(X0)]
 
     for t, dt, dW in zip(ts[:-1], dts, dWs):
-        X.append(X[-1] + drift(X[-1], t)*dt + diffusion(X[-1], t)*(dW +
-            0.5*diffusion_prime(X[-1], t)*(dW**2 - dt)))
+        X.append(X[-1] + drift(X[-1], t)*dt + diffusion(X[-1], t)*dW +
+                 bx_dx_b(X[-1], t)*(dW**2 - dt))
 
     return X

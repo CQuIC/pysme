@@ -168,5 +168,5 @@ where we define:
    \begin{align}
    G_{x,y}&=2\left(\operatorname{Tr}[\Lambda^x\Lambda^x]\right)^{-1}\sum_z
    \Re\left\{c_z\operatorname{Tr}[\Lambda^x\Lambda^z\Lambda^y]\right\} \\
-   k_x&=-2\Re\{c_x\}\operatorname{Tr}[\Lambda^y\Lambda^y]
+   k_x&=-2\Re\{c_x\}\operatorname{Tr}[\Lambda^x\Lambda^x]
    \end{align}
