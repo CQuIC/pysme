@@ -7,7 +7,7 @@
 
 import numpy as np
 
-def milstein(drift, diffusion, diffusion_prime, X0, ts, dws):
+def milstein(drift, diffusion, bx_dx_b, X0, ts, dws):
     r"""Integrate a system of ordinary stochastic differential equations subject
     to scalar noise:
 
@@ -51,10 +51,10 @@ def milstein(drift, diffusion, diffusion_prime, X0, ts, dws):
 
     """
 
-    dts = [tf - ti for tf, ti in zip(t[1:], t[:-1])]
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
     # Scale the Weiner increments to the time increments.
     sqrtdts = np.sqrt(dts)
-    dWs = np.product(np.array([sqrtdt, dws]), axis=0)
+    dWs = np.product(np.array([sqrtdts, dws]), axis=0)
 
     X = [np.array(X0)]
 

@@ -250,7 +250,8 @@ def weiner_op(coupling_op, basis):
                         need to be normalized).
     :type basis:        list(numpy.array)
     :returns:           The matrix-vector pair :math:`(G,\vec{k})` operating on
-                        a vectorized density operator
+                        a vectorized density operator (k is returned as a
+                        row-vector)
     :rtype:             tuple(numpy.array)
 
     """
