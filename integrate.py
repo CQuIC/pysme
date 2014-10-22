@@ -76,7 +76,27 @@ def milstein_correction_fn(G_sq, k_T_prime, G, k_T, rho):
             np.dot(G_sq + 2*k_rho_dot*G, rho)
 
 def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times):
-    r"""
+    r"""Integrate the conditional Gaussian master equation.
+
+    :param rho_0:   The initial state of the system
+    :type rho_0:    numpy.array
+    :param c_op:    The coupling operator
+    :type c_op:     numpy.array
+    :param M_sq:    The squeezing parameter
+    :type M_sq:     complex
+    :param N:       The thermal parameter
+    :type N:        positive real
+    :param H:       The plant Hamiltonian
+    :type H:        numpy.array
+    :param basis:   The Hermitian basis to vectorize the operators in terms of
+                    (with the component proportional to the identity in last
+                    place)
+    :type basis:    list(numpy.array)
+    :param times:   A sequence of time points for which to solve for rho
+    :type times:    list(real)
+    :returns:       The components of the vecorized :math:`\rho` for all
+                    specified times
+    :rtype:         list(numpy.array)
 
     """
 
