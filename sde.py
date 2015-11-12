@@ -149,10 +149,12 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
     dWs = U1s*sqrtdts
     dZs = (U1s + U2s/np.sqrt(3))*sqrtdts*dts/2
 
-    X = [np.array(X0)]
+    Xs = [np.array(X0)]
 
     for t, dt, dW, dZ in zip(ts[:-1], dts, dWs, dZs):
-        X.append(X[-1] + drift(X[-1])*dt + diffusion(X[-1])*dW +
-                 b_dx_b(X[-1], t)*(dW**2 - dt)/2)
+        X = Xs[-1]
+        Xs.append(X + drift(X)*dt + diffusion(X)*dW + b_dx_b(X)*(dW**2 - dt)/2 +
+                  b_dx_a(X)*dZ + a_dx_b(X)*(dW*dt - dZ) + a_dx_a(X)*dt**2/2 +
+                  b_dx_b_dx_b(X)*(dW**2/3 - dt)*dW/2)
 
-    return X
+    return Xs
