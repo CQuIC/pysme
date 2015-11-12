@@ -63,7 +63,7 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
 
     for t, dt, dW in zip(ts[:-1], dts, dWs):
         X.append(X[-1] + drift(X[-1], t)*dt + diffusion(X[-1], t)*dW +
-                 b_dx_b(X[-1], t)*(dW**2 - dt))
+                 b_dx_b(X[-1], t)*(dW**2 - dt)/2)
 
     return X
 
@@ -148,3 +148,11 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
     sqrtdts = np.sqrt(dts)
     dWs = U1s*sqrtdts
     dZs = (U1s + U2s/np.sqrt(3))*sqrtdts*dts/2
+
+    X = [np.array(X0)]
+
+    for t, dt, dW, dZ in zip(ts[:-1], dts, dWs, dZs):
+        X.append(X[-1] + drift(X[-1])*dt + diffusion(X[-1])*dW +
+                 b_dx_b(X[-1], t)*(dW**2 - dt)/2)
+
+    return X
