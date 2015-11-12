@@ -20,7 +20,7 @@ def milstein(drift, diffusion, bx_dx_b, X0, ts, dws):
     .. math::
 
        \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
-       vec{b}(\vec{X}_i,t_i)\Delta W_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta W_i+
        \frac{1}{2}\left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
        \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
 
@@ -28,7 +28,7 @@ def milstein(drift, diffusion, bx_dx_b, X0, ts, dws):
                             :math:`\vec{a}(\vec{X},t)`
     :type drift:            callable(X, t)
     :param diffusion:       Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X},t)` at t0
+                            :math:`\vec{b}(\vec{X},t)`
     :type diffusion:        callable(X, t)
     :param bx_dx_b:         Computes the correction coefficient
                             :math:`\left(\vec{b}(\vec{X},t)\cdot
@@ -44,7 +44,7 @@ def milstein(drift, diffusion, bx_dx_b, X0, ts, dws):
                             (i.e. samples from a Gaussian distribution with mean
                             0 and variance 1).
     :type dws:              array, shape (len(t) - 1)
-    :return:                Array containint the value of X for each desired
+    :return:                Array containing the value of X for each desired
                             time in t, with the initial value `X0` in the first
                             row.
     :rtype:                 numpy.array, shape (len(t), len(X0))
