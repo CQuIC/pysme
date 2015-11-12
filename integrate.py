@@ -71,7 +71,7 @@ def uncond_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times):
             times, Dfun=(lambda rho_vec, t: diff_mat))
 
 def b_dx_b(G2, k_T_G, G, k_T, rho):
-    '''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
+    r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
     \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for Milstein
     integration.
 
@@ -89,8 +89,8 @@ def b_dx_b(G2, k_T_G, G, k_T, rho):
             np.dot(G2 + 2*k_rho_dot*G, rho)
 
 def b_dx_a(QG, k_T, Q, rho):
-    '''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
-    \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})` term for Milstein
+    r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
+    \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})` term for stochastic
     integration.
 
     :param QG:          :math:`QG`.
@@ -104,8 +104,8 @@ def b_dx_a(QG, k_T, Q, rho):
     return np.dot(QG + np.dot(k_T, rho)*Q, rho)
 
 def a_dx_b(GQ, k_T, Q, k_T_Q, rho):
-    '''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
-    \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for Milstein
+    r'''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
+    \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for stochastic
     integration.
 
     :param GQ:          :math:`GQ`.
@@ -120,8 +120,8 @@ def a_dx_b(GQ, k_T, Q, k_T_Q, rho):
     return np.dot(GQ + np.dot(k_T, rho)*Q, rho) + np.dot(k_T_Q, rho)
 
 def a_dx_a(Q2, rho):
-    '''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
-    \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for Milstein
+    r'''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
+    \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})` term for stochastic
     integration.
 
     :param Q2:          :math:`Q^2`.
@@ -133,11 +133,16 @@ def a_dx_a(Q2, rho):
     return np.dot(Q2, rho)
 
 def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
-    '''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
-    \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for Milstein
+    r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
+    \vec{\nabla}_{\vec{\rho}}\right)^2\vec{b}(\vec{\rho})` term for stochastic
     integration.
 
-    :param Q_sq:        :math:`Q^2`.
+    :param G3:          :math:`G^3`.
+    :param G2:          :math:`G^2`.
+    :param G:           :math:`G`.
+    :param k_T:         :math:`\vec{k}^T`.
+    :param k_T_G:       :math:`\vec{k}^TG`.
+    :param k_T_G2:      :math:`\vec{k}^TG^2`.
     :param rho:         :math:`\rho`.
     :returns:           :math:`\left(\vec{b}(\vec{\rho})\cdot
                         \vec{\nabla}_{\vec{\rho}}\right)^2\vec{b}(\vec{\rho})`.
