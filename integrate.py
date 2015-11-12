@@ -113,8 +113,8 @@ def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times):
     b_fn = lambda rho, t: np.dot(k_T, rho)*rho + np.dot(G_mat, rho)
     k_T_prime = np.dot(k_T, G_mat)
     G_sq = np.dot(G_mat, G_mat)
-    bx_dx_b_fn = lambda rho, t: milstein_correction_fn(G_sq, k_T_prime, G_mat,
-                                                       k_T, rho)
+    b_dx_b_fn = lambda rho, t: milstein_correction_fn(G_sq, k_T_prime, G_mat,
+                                                      k_T, rho)
 
-    return milstein(a_fn, b_fn, bx_dx_b_fn, rho_0_vec, times,
+    return milstein(a_fn, b_fn, b_dx_b_fn, rho_0_vec, times,
                     np.random.randn(len(times) - 1))
