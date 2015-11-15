@@ -155,7 +155,7 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
                    rho) + (k_T_G2_rho_dot + 6*k_rho_dot*k_T_G_rho_dot +
                            6*k_rho_dot**3)*rho)
 
-def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times):
+def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times, Us=None):
     r"""Integrate the conditional Gaussian master equation using Milstein
     integration.
 
@@ -175,6 +175,11 @@ def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times):
     :type basis:    list(numpy.array)
     :param times:   A sequence of time points for which to solve for rho
     :type times:    list(real)
+    :param Us:      A sequence of normalized Wiener increments (samples from a
+                    normal distribution with mean 0 and variance 1). If None,
+                    then this function will generate its own samples. The length
+                    should be len(times) - 1.
+    :type Us:       list(real)
     :returns:       The components of the vecorized :math:`\rho` for all
                     specified times
     :rtype:         list(numpy.array)
@@ -194,11 +199,13 @@ def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times):
     k_T_G = np.dot(k_T, G)
     G2 = np.dot(G, G)
     b_dx_b_fn = lambda rho, t: b_dx_b(G2, k_T_G, G, k_T, rho)
+    if Us is None:
+        Us = np.random.randn(len(times) - 1)
 
-    return milstein(a_fn, b_fn, b_dx_b_fn, rho_0_vec, times,
-                    np.random.randn(len(times) - 1))
+    return milstein(a_fn, b_fn, b_dx_b_fn, rho_0_vec, times, Us)
 
-def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times):
+def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times,
+                                 U1s=None, U2s=None):
     r"""Integrate the conditional Gaussian master equation using order 1.5
     Taylor integration.
 
@@ -218,6 +225,16 @@ def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times):
     :type basis:    list(numpy.array)
     :param times:   A sequence of time points for which to solve for rho
     :type times:    list(real)
+    :param U1s:     A sequence of normalized Wiener increments (samples from a
+                    normal distribution with mean 0 and variance 1). If None,
+                    then this function will generate its own samples. The length
+                    should be len(times) - 1.
+    :type U1s:      list(real)
+    :param U2s:     A sequence of normalized Wiener increments (samples from a
+                    normal distribution with mean 0 and variance 1). If None,
+                    then this function will generate its own samples. The length
+                    should be len(times) - 1.
+    :type U2s:      list(real)
     :returns:       The components of the vecorized :math:`\rho` for all
                     specified times
     :rtype:         list(numpy.array)
@@ -247,8 +264,141 @@ def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times):
     a_dx_b_fn = lambda rho: a_dx_b(GQ, k_T, Q, k_T_Q, rho)
     a_dx_a_fn = lambda rho: a_dx_a(Q2, rho)
     b_dx_b_dx_b_fn = lambda rho: b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho)
+    if U1s is None:
+        U1s = np.random.randn(len(times) -1)
+    if U2s is None:
+        U2s = np.random.randn(len(times) -1)
 
     return time_ind_taylor_1_5(a_fn, b_fn, b_dx_b_fn, b_dx_a_fn, a_dx_b_fn,
-                               a_dx_a_fn, b_dx_b_dx_b_fn, rho_0_vec, times,
-                               np.random.randn(len(times) - 1),
-                               np.random.randn(len(times) - 1))
+                               a_dx_a_fn, b_dx_b_dx_b_fn, rho_0_vec, times, U1s,
+                               U2s)
+
+def compare_milstein_taylor_1_5(rho_0, c_op, M_sq, N, H, basis, times, U1s=None,
+                                U2s=None):
+    r"""Integrate the conditional Gaussian master equation using order 1.5
+    Taylor integration as well as Milstein integration.
+
+    :param rho_0:   The initial state of the system
+    :type rho_0:    numpy.array
+    :param c_op:    The coupling operator
+    :type c_op:     numpy.array
+    :param M_sq:    The squeezing parameter
+    :type M_sq:     complex
+    :param N:       The thermal parameter
+    :type N:        positive real
+    :param H:       The plant Hamiltonian
+    :type H:        numpy.array
+    :param basis:   The Hermitian basis to vectorize the operators in terms of
+                    (with the component proportional to the identity in last
+                    place)
+    :type basis:    list(numpy.array)
+    :param times:   A sequence of time points for which to solve for rho
+    :type times:    list(real)
+    :param U1s:     A sequence of normalized Wiener increments (samples from a
+                    normal distribution with mean 0 and variance 1). If None,
+                    then this function will generate its own samples. The length
+                    should be len(times) - 1.
+    :type U1s:      list(real)
+    :param U2s:     A sequence of normalized Wiener increments (samples from a
+                    normal distribution with mean 0 and variance 1). If None,
+                    then this function will generate its own samples. The length
+                    should be len(times) - 1.
+    :type U2s:      list(real)
+    :returns:       The components of the vecorized :math:`\rho` for all
+                    specified times, first for Milstein and then for Taylor 1.5
+    :rtype:         (list(numpy.array), list(numpy.array))
+
+    """
+
+    rho_0_vec = np.array([[comp.real] for comp in vectorize(rho_0, basis)])
+    Q = (N + 1)*diffusion_op(c_op, basis[:-1]) + \
+        N*diffusion_op(c_op.conj().T, basis[:-1]) + \
+        double_comm_op(c_op, M_sq, basis[:-1]) + hamiltonian_op(H, basis[:-1])
+    G, k_T = weiner_op(((N + M_sq.conjugate() + 1)*c_op -
+                           (N + M_sq)*c_op.conj().T)/
+                           sqrt(2*(M_sq.real + N) + 1), basis[:-1])
+
+    a_fn = lambda rho: np.dot(Q, rho)
+    m_a_fn = lambda rho, t: a_fn(rho)
+    b_fn = lambda rho: np.dot(k_T, rho)*rho + np.dot(G, rho)
+    m_b_fn = lambda rho, t: b_fn(rho)
+    G2 = np.dot(G, G)
+    G3 = np.dot(G2, G)
+    Q2 = np.dot(Q, Q)
+    QG = np.dot(Q, G)
+    GQ = np.dot(G, Q)
+    k_T_G = np.dot(k_T, G)
+    k_T_G2 = np.dot(k_T, G2)
+    k_T_Q = np.dot(k_T, Q)
+    b_dx_b_fn = lambda rho: b_dx_b(G2, k_T_G, G, k_T, rho)
+    m_b_dx_b_fn = lambda rho, t: b_dx_b_fn(rho)
+    b_dx_a_fn = lambda rho: b_dx_a(QG, k_T, Q, rho)
+    a_dx_b_fn = lambda rho: a_dx_b(GQ, k_T, Q, k_T_Q, rho)
+    a_dx_a_fn = lambda rho: a_dx_a(Q2, rho)
+    b_dx_b_dx_b_fn = lambda rho: b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho)
+    if U1s is None:
+        U1s = np.random.randn(len(times) -1)
+    if U2s is None:
+        U2s = np.random.randn(len(times) -1)
+
+    X_milstein = milstein(m_a_fn, m_b_fn, m_b_dx_b_fn, rho_0_vec, times, U1s)
+
+    X_taylor_1_5 = time_ind_taylor_1_5(a_fn, b_fn, b_dx_b_fn, b_dx_a_fn,
+                                       a_dx_b_fn, a_dx_a_fn, b_dx_b_dx_b_fn,
+                                       rho_0_vec, times, U1s, U2s)
+
+    return X_milstein, X_taylor_1_5
+
+def milstein_grid_convergence(rho_0, c_op, M_sq, N, H, basis, times, Us=None):
+    r"""Calculate the same trajectory for time increments :math:`\Delta t`,
+    :math:`2\Delta t`, and :math:`4\Delta t` using Milstein integration.
+
+    :param rho_0:   The initial state of the system
+    :type rho_0:    numpy.array
+    :param c_op:    The coupling operator
+    :type c_op:     numpy.array
+    :param M_sq:    The squeezing parameter
+    :type M_sq:     complex
+    :param N:       The thermal parameter
+    :type N:        positive real
+    :param H:       The plant Hamiltonian
+    :type H:        numpy.array
+    :param basis:   The Hermitian basis to vectorize the operators in terms of
+                    (with the component proportional to the identity in last
+                    place)
+    :type basis:    list(numpy.array)
+    :param times:   A sequence of time points for which to solve for rho. The
+                    length should be such that (len(times) - 1)%4 == 0.
+    :type times:    list(real)
+    :param Us:      A sequence of normalized Wiener increments (samples from a
+                    normal distribution with mean 0 and variance 1). If None,
+                    then this function will generate its own samples. The length
+                    should be len(times) - 1.
+    :type Us:       list(real)
+    :returns:       The components of the vecorized :math:`\rho` for all
+                    specified times, first for Milstein and then for Taylor 1.5
+    :rtype:         (list(numpy.array), list(numpy.array))
+
+    """
+
+    times_2 = times[::2]    # 2 Delta t
+    times_4 = times[::4]    # 4 Delta t
+
+    increments = len(times) - 1
+    if Us is None:
+        Us = np.random.randn(increments)
+
+    # Have to divide by sqrt(N) after summing N samples from a standard normal
+    # distribution to get another standard normal distribution.
+    # 2 Delta t
+    Us_2 = np.sum(np.reshape(Us, (increments//2, 2)), axis=1)/np.sqrt(2)
+    # 4 Delta t
+    Us_4 = np.sum(np.reshape(Us, (increments//4, 4)), axis=1)/2
+
+    rhos = homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times, Us)
+    rhos_2 = homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times_2,
+                                      Us_2)
+    rhos_4 = homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times_4,
+                                      Us_4)
+
+    return [(rhos, times), (rhos_2, times_2), (rhos_4, times_4)]
