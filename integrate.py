@@ -204,6 +204,56 @@ def homodyne_gauss_integrate(rho_0, c_op, M_sq, N, H, basis, times, Us=None):
 
     return milstein(a_fn, b_fn, b_dx_b_fn, rho_0_vec, times, Us)
 
+def prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis):
+    r'''Calculate the vectorized initial state and coefficient functions for the
+    strong order 1.5 Taylor integration scheme.
+
+    :param rho_0:   The initial state of the system
+    :type rho_0:    numpy.array
+    :param c_op:    The coupling operator
+    :type c_op:     numpy.array
+    :param M_sq:    The squeezing parameter
+    :type M_sq:     complex
+    :param N:       The thermal parameter
+    :type N:        positive real
+    :param H:       The plant Hamiltonian
+    :type H:        numpy.array
+    :param basis:   The Hermitian basis to vectorize the operators in terms of
+                    (with the component proportional to the identity in last
+                    place)
+    :type basis:    list(numpy.array)
+    :returns:       Vectorized rho and coefficient functions (drift, diffusion,
+                    b_dx_b, b_dx_a, a_dx_b, a_dx_a, b_dx_b_dx_b)
+
+    '''
+
+    rho_0_vec = np.array([[comp.real] for comp in vectorize(rho_0, basis)])
+    Q = (N + 1)*diffusion_op(c_op, basis[:-1]) + \
+        N*diffusion_op(c_op.conj().T, basis[:-1]) + \
+        double_comm_op(c_op, M_sq, basis[:-1]) + hamiltonian_op(H, basis[:-1])
+    G, k_T = weiner_op(((N + M_sq.conjugate() + 1)*c_op -
+                           (N + M_sq)*c_op.conj().T)/
+                           sqrt(2*(M_sq.real + N) + 1), basis[:-1])
+
+    a_fn = lambda rho: np.dot(Q, rho)
+    b_fn = lambda rho: np.dot(k_T, rho)*rho + np.dot(G, rho)
+    G2 = np.dot(G, G)
+    G3 = np.dot(G2, G)
+    Q2 = np.dot(Q, Q)
+    QG = np.dot(Q, G)
+    GQ = np.dot(G, Q)
+    k_T_G = np.dot(k_T, G)
+    k_T_G2 = np.dot(k_T, G2)
+    k_T_Q = np.dot(k_T, Q)
+    b_dx_b_fn = lambda rho: b_dx_b(G2, k_T_G, G, k_T, rho)
+    b_dx_a_fn = lambda rho: b_dx_a(QG, k_T, Q, rho)
+    a_dx_b_fn = lambda rho: a_dx_b(GQ, k_T, Q, k_T_Q, rho)
+    a_dx_a_fn = lambda rho: a_dx_a(Q2, rho)
+    b_dx_b_dx_b_fn = lambda rho: b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho)
+
+    return (a_fn, b_fn, b_dx_b_fn, b_dx_a_fn, a_dx_b_fn, a_dx_a_fn,
+            b_dx_b_dx_b_fn, rho_0_vec)
+
 def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times,
                                  U1s=None, U2s=None):
     r"""Integrate the conditional Gaussian master equation using order 1.5
@@ -241,37 +291,14 @@ def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times,
 
     """
 
-    rho_0_vec = np.array([[comp.real] for comp in vectorize(rho_0, basis)])
-    Q = (N + 1)*diffusion_op(c_op, basis[:-1]) + \
-        N*diffusion_op(c_op.conj().T, basis[:-1]) + \
-        double_comm_op(c_op, M_sq, basis[:-1]) + hamiltonian_op(H, basis[:-1])
-    G, k_T = weiner_op(((N + M_sq.conjugate() + 1)*c_op -
-                           (N + M_sq)*c_op.conj().T)/
-                           sqrt(2*(M_sq.real + N) + 1), basis[:-1])
-
-    a_fn = lambda rho: np.dot(Q, rho)
-    b_fn = lambda rho: np.dot(k_T, rho)*rho + np.dot(G, rho)
-    G2 = np.dot(G, G)
-    G3 = np.dot(G2, G)
-    Q2 = np.dot(Q, Q)
-    QG = np.dot(Q, G)
-    GQ = np.dot(G, Q)
-    k_T_G = np.dot(k_T, G)
-    k_T_G2 = np.dot(k_T, G2)
-    k_T_Q = np.dot(k_T, Q)
-    b_dx_b_fn = lambda rho: b_dx_b(G2, k_T_G, G, k_T, rho)
-    b_dx_a_fn = lambda rho: b_dx_a(QG, k_T, Q, rho)
-    a_dx_b_fn = lambda rho: a_dx_b(GQ, k_T, Q, k_T_Q, rho)
-    a_dx_a_fn = lambda rho: a_dx_a(Q2, rho)
-    b_dx_b_dx_b_fn = lambda rho: b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho)
     if U1s is None:
         U1s = np.random.randn(len(times) -1)
     if U2s is None:
         U2s = np.random.randn(len(times) -1)
 
-    return time_ind_taylor_1_5(a_fn, b_fn, b_dx_b_fn, b_dx_a_fn, a_dx_b_fn,
-                               a_dx_a_fn, b_dx_b_dx_b_fn, rho_0_vec, times, U1s,
-                               U2s)
+    arguments = prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis)
+
+    return time_ind_taylor_1_5(*arguments, ts=times, U1s=U1s, U2s=U2s)
 
 def compare_milstein_taylor_1_5(rho_0, c_op, M_sq, N, H, basis, times, U1s=None,
                                 U2s=None):
