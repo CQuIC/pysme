@@ -113,3 +113,5 @@ The new terms in the higher-order update formula are given below:
    &\quad\left(\vec{k}^TG^2\vec{\rho}+6(\vec{k}\cdot\vec{\rho})
    \vec{k}^TG\vec{\rho}+6(\vec{k}\cdot\vec{\rho})^3\right)\vec{\rho}
    \end{align}
+
+We explore testing the convergence rates in :doc:`testing`.
