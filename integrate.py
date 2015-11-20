@@ -251,8 +251,9 @@ def prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis):
     a_dx_a_fn = lambda rho: a_dx_a(Q2, rho)
     b_dx_b_dx_b_fn = lambda rho: b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho)
 
-    return (a_fn, b_fn, b_dx_b_fn, b_dx_a_fn, a_dx_b_fn, a_dx_a_fn,
-            b_dx_b_dx_b_fn, rho_0_vec)
+    return {'drift': a_fn, 'diffusion': b_fn, 'b_dx_b': b_dx_b_fn,
+            'b_dx_a': b_dx_a_fn, 'a_dx_b': a_dx_b_fn, 'a_dx_a': a_dx_a_fn,
+            'b_dx_b_dx_b': b_dx_b_dx_b_fn, 'X0': rho_0_vec}
 
 def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times,
                                  U1s=None, U2s=None):
@@ -296,9 +297,10 @@ def homodyne_gauss_integrate_1_5(rho_0, c_op, M_sq, N, H, basis, times,
     if U2s is None:
         U2s = np.random.randn(len(times) -1)
 
-    arguments = prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis)
+    keyword_args = prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis)
+    keyword_args.update({'ts': times, 'U1s': U1s, 'U2s': U2s})
 
-    return time_ind_taylor_1_5(*arguments, ts=times, U1s=U1s, U2s=U2s)
+    return time_ind_taylor_1_5(**keyword_args)
 
 def compare_milstein_taylor_1_5(rho_0, c_op, M_sq, N, H, basis, times, U1s=None,
                                 U2s=None):

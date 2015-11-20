@@ -165,6 +165,23 @@ def faulty_milstein_grid_convergence(rho_0, c_op, M_sq, N, H, basis, times,
 
     return [(rhos, times), (rhos_2, times_2), (rhos_4, times_4)]
 
+def homodyne_strong_calc_rate(integrator_fn, keyword_args, times, U1s, U2s,
+                              times_2, U1s_2, U2s_2, times_4, U1s_4, U2s_4):
+    keyword_args_2 = keyword_args.copy()
+    keyword_args_4 = keyword_args.copy()
+
+    keyword_args.update({'ts': times, 'U1s': U1s, 'U2s': U2s})
+    keyword_args_2.update({'ts': times_2, 'U1s': U1s_2, 'U2s': U2s_2})
+    keyword_args_4.update({'ts': times_4, 'U1s': U1s_4, 'U2s': U2s_4})
+
+    rhos = integrator_fn(**keyword_args)
+    rhos_2 = integrator_fn(**keyword_args_2)
+    rhos_4 = integrator_fn(**keyword_args_4)
+    rate = (np.log(l1_norm(rhos_4[-1] - rhos_2[-1])) -
+            np.log(l1_norm(rhos_2[-1] - rhos[-1])))/np.log(2)
+
+    return rate
+
 def homodyne_strong_grid_convergence(rho_0, c_op, M_sq, N, H, basis, prep_fn,
                                      integrator_fn, times, U1s=None, U2s=None,
                                      trajectories=256):
@@ -204,7 +221,8 @@ def homodyne_strong_grid_convergence(rho_0, c_op, M_sq, N, H, basis, prep_fn,
 
     '''
 
-    arguments = prep_fn(rho_0, c_op, M_sq, N, H, basis)
+    keyword_args = prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis)
+    # keyword_args = prep_fn(rho_0, c_op, M_sq, N, H, basis)
 
     increments = len(times) - 1
     if U1s is None:
@@ -217,26 +235,20 @@ def homodyne_strong_grid_convergence(rho_0, c_op, M_sq, N, H, basis, prep_fn,
     times_2, U1s_2, U2s_2 = double_increments(times, U1s, U2s)
     times_4, U1s_4, U2s_4 = double_increments(times_2, U1s_2, U2s_2)
 
-    # Parallel having trouble with pickling (think it has to do with the
-    # *arguments)
+    meta_kwargs = [{'integrator_fn': integrator_fn,
+                    'keyword_args': keyword_args, 'times': times, 'U1s': U1,
+                    'U2s': U2, 'times_2': times_2, 'U1s_2': U1_2, 'U2s_2': U2_2,
+                    'times_4': times_4, 'U1s_4': U1_4, 'U2s_4': U2_4}
+                   for U1, U2, U1_2, U2_2, U1_4, U2_4
+                   in zip(U1s, U2s, U1s_2, U2s_2, U1s_4, U2s_4)]
+
     """
-    rhos = Parallel(n_jobs=-1)(delayed(integrator_fn)(*arguments, ts=times,
-                                                      U1s=U1s[index],
-                                                      U2s=U2s[index])
-                               for index in range(trajectories))
-    rhos_2 = Parallel(n_jobs=-1)(delayed(integrator_fn)(*arguments, ts=times_2,
-                                                        U1s=U1s_2[index],
-                                                        U2s=U2s_2[index])
-                                 for index in range(trajectories))
-    rhos_4 = Parallel(n_jobs=-1)(delayed(integrator_fn)(*arguments, ts=times_4,
-                                                        U1s=U1s_4[index],
-                                                        U2s=U2s_4[index])
-                                 for index in range(trajectories))
-    rates = [(np.log(l1_norm(rho_4[-1] - rho_2[-1])) -
-              np.log(l1_norm(rho_2[-1] - rho[-1])))/np.log(2)
-             for rho, rho_2, rho_4 in zip(rhos, rhos_2, rhos_4)]
-    """
+    rates = Parallel(n_jobs=2)(delayed(homodyne_strong_calc_rate)(**meta_kwarg)
+                               for meta_kwarg in meta_kwargs)
     rates = np.zeros(trajectories)
+
+
+
     for index in range(trajectories):
         rhos = integrator_fn(*arguments, ts=times, U1s=U1s[index],
                              U2s=U2s[index])
@@ -247,6 +259,7 @@ def homodyne_strong_grid_convergence(rho_0, c_op, M_sq, N, H, basis, prep_fn,
 
         rates[index] = (np.log(l1_norm(rhos_4[-1] - rhos_2[-1])) -
                         np.log(l1_norm(rhos_2[-1] - rhos[-1])))/np.log(2)
+    """
 
 
-    return rates
+    return meta_kwargs
