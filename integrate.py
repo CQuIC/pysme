@@ -11,6 +11,60 @@ from pysme.system_builder import *
 from pysme.sde import *
 from math import sqrt
 
+class Taylor_1_5_HomodyneIntegrator:
+    def __init__(self, rho_0, c_op, M_sq, N, H, basis):
+        self.rho_0_vec = np.array([[comp.real]
+                                   for comp in vectorize(rho_0, basis)])
+        self.Q = (N + 1)*diffusion_op(c_op, basis[:-1]) + \
+                 N*diffusion_op(c_op.conj().T, basis[:-1]) + \
+                 double_comm_op(c_op, M_sq, basis[:-1]) + \
+                 hamiltonian_op(H, basis[:-1])
+        self.G, self.k_T = weiner_op(((N + M_sq.conjugate() + 1)*c_op -
+                                      (N + M_sq)*c_op.conj().T)/
+                                     sqrt(2*(M_sq.real + N) + 1), basis[:-1])
+
+        self.G2 = np.dot(self.G, self.G)
+        self.G3 = np.dot(self.G2, self.G)
+        self.Q2 = np.dot(self.Q, self.Q)
+        self.QG = np.dot(self.Q, self.G)
+        self.GQ = np.dot(self.G, self.Q)
+        self.k_T_G = np.dot(self.k_T, self.G)
+        self.k_T_G2 = np.dot(self.k_T, self.G2)
+        self.k_T_Q = np.dot(self.k_T, self.Q)
+
+    def a_fn(self, rho):
+        return np.dot(self.Q, rho)
+
+    def b_fn(self, rho):
+        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
+
+    def b_dx_b_fn(self, rho):
+        return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
+
+    def b_dx_a_fn(self, rho):
+        return b_dx_a(self.QG, self.k_T, self.Q, rho)
+
+    def a_dx_b_fn(self, rho):
+        return a_dx_b(self.GQ, self.k_T, self.Q, self.k_T_Q, rho)
+
+    def a_dx_a_fn(self, rho):
+        return a_dx_a(self.Q2, rho)
+
+    def b_dx_b_dx_b_fn(self, rho):
+        return b_dx_b_dx_b(self.G3, self.G2, self.G, self.k_T, self.k_T_G,
+                           self.k_T_G2, rho)
+
+    def integrate(self, times, U1s=None, U2s=None):
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+        if U2s is None:
+            U2s = np.random.randn(len(times) -1)
+
+        return time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
+                                   self.b_dx_a_fn, self.a_dx_b_fn,
+                                   self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
+                                   self.rho_0_vec, times, U1s, U2s)
+
 def uncond_vac_integrate(rho_0, c_op, basis, times):
     r"""Integrate an unconditional vacuum master equation.
 
