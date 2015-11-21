@@ -12,9 +12,8 @@ from pysme.sde import *
 from math import sqrt
 
 class Taylor_1_5_HomodyneIntegrator:
-    def __init__(self, rho_0, c_op, M_sq, N, H, basis):
-        self.rho_0_vec = np.array([[comp.real]
-                                   for comp in vectorize(rho_0, basis)])
+    def __init__(self, c_op, M_sq, N, H, basis):
+        self.basis = basis
         self.Q = (N + 1)*diffusion_op(c_op, basis[:-1]) + \
                  N*diffusion_op(c_op.conj().T, basis[:-1]) + \
                  double_comm_op(c_op, M_sq, basis[:-1]) + \
@@ -54,7 +53,9 @@ class Taylor_1_5_HomodyneIntegrator:
         return b_dx_b_dx_b(self.G3, self.G2, self.G, self.k_T, self.k_T_G,
                            self.k_T_G2, rho)
 
-    def integrate(self, times, U1s=None, U2s=None):
+    def integrate(self, rho_0, times, U1s=None, U2s=None):
+        rho_0_vec = np.array([[comp.real]
+                              for comp in vectorize(rho_0, self.basis)])
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
         if U2s is None:
@@ -63,7 +64,7 @@ class Taylor_1_5_HomodyneIntegrator:
         return time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
                                    self.b_dx_a_fn, self.a_dx_b_fn,
                                    self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
-                                   self.rho_0_vec, times, U1s, U2s)
+                                   rho_0_vec, times, U1s, U2s)
 
 def uncond_vac_integrate(rho_0, c_op, basis, times):
     r"""Integrate an unconditional vacuum master equation.
