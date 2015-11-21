@@ -45,15 +45,15 @@ def double_increments(times, U1s, U2s=None):
     '''
 
     new_times = times[::2]
-    even_U1s = U1s[:,::2]
-    odd_U1s = U1s[:,1::2]
+    even_U1s = U1s[::2]
+    odd_U1s = U1s[1::2]
     new_U1s = (even_U1s + odd_U1s)/np.sqrt(2)
 
     if U2s is None:
         return new_times, new_U1s
     else:
-        even_U2s = U2s[:,::2]
-        odd_U2s = U2s[:,1::2]
+        even_U2s = U2s[::2]
+        odd_U2s = U2s[1::2]
         new_U2s = (np.sqrt(3)*(even_U1s - odd_U1s) +
                    even_U2s + odd_U2s)/(2*np.sqrt(2))
         return new_times, new_U1s, new_U2s
@@ -101,6 +101,9 @@ def milstein_grid_convergence(rho_0, c_op, M_sq, N, H, basis, times, Us=None):
 
     # Calculate times and random variables for the double and quadruple
     # intervals
+    # TODO: find someway to deal with the fact that I want to use
+    # double_increments with both 1d and 2d inputs (have currently changed it to
+    # only work with 1d inputs, so this method is broken).
     times_2, Us_2 = double_increments(times, Us)
     times_4, Us_4 = double_increments(times_2, Us_2)
 
@@ -165,10 +168,12 @@ def faulty_milstein_grid_convergence(rho_0, c_op, M_sq, N, H, basis, times,
 
     return [(rhos, times), (rhos_2, times_2), (rhos_4, times_4)]
 
-def calc_rate(integrator, times, U1s=None, U2s=None):
+def calc_rate(integrator, rho_0, times, U1s=None, U2s=None):
     '''Calculate the convergence rate for some integrator.
 
     :param integrator:  An Integrator object.
+    :param rho_0:           The initial state of the system
+    :type rho_0:            numpy.array
     :param times:       Sequence of times (assumed to be evenly spaced, defining
                         a number of increments divisible by 4).
     :param U1s:         Samples from a standard-normal distribution used to
@@ -196,9 +201,9 @@ def calc_rate(integrator, times, U1s=None, U2s=None):
     times_2, U1s_2, U2s_2 = double_increments(times, U1s, U2s)
     times_4, U1s_4, U2s_4 = double_increments(times_2, U1s_2, U2s_2)
 
-    rhos = integrator.integrate(times, U1s, U2s)
-    rhos_2 = integrator.integrate(times_2, U1s_2, U2s_2)
-    rhos_4 = integrator.integrate(times_4, U1s_4, U2s_4)
+    rhos = integrator.integrate(rho_0, times, U1s, U2s)
+    rhos_2 = integrator.integrate(rho_0, times_2, U1s_2, U2s_2)
+    rhos_4 = integrator.integrate(rho_0, times_4, U1s_4, U2s_4)
     rate = (np.log(l1_norm(rhos_4[-1] - rhos_2[-1])) -
             np.log(l1_norm(rhos_2[-1] - rhos[-1])))/np.log(2)
 
@@ -221,84 +226,42 @@ def homodyne_strong_calc_rate(integrator_fn, keyword_args, times, U1s, U2s,
 
     return rate
 
-def homodyne_strong_grid_convergence(rho_0, c_op, M_sq, N, H, basis, prep_fn,
-                                     integrator_fn, times, U1s=None, U2s=None,
-                                     trajectories=256):
-    r'''Calculate the strong convergence rate for an integrator on the
-    Gaussian homodyne stochastic master equation.
+def strong_grid_convergence(integrator, rho_0, times, U1s_arr=None,
+                            U2s_arr=None, trajectories=256, n_jobs=1):
+    r'''Calculate the strong convergence rate for an integrator.
 
-    :param rho_0:   The initial state of the system
-    :type rho_0:    numpy.array
-    :param c_op:    The coupling operator
-    :type c_op:     numpy.array
-    :param M_sq:    The squeezing parameter
-    :type M_sq:     complex
-    :param N:       The thermal parameter
-    :type N:        positive real
-    :param H:       The plant Hamiltonian
-    :type H:        numpy.array
-    :param basis:   The Hermitian basis to vectorize the operators in terms of
-                    (with the component proportional to the identity in last
-                    place)
-    :type basis:    list(numpy.array)
-    :param prep_fn:         Function to prepare arguments for the integrator.
-    :param integrator_fn:   Function to perform the integration.
-    :param times:   A sequence of time points for which to solve for rho
-    :type times:    list(real)
-    :param U1s:     Samples from a standard-normal distribution used to
-                    construct Wiener increments :math:`\Delta W` for each time
-                    interval for each trajectory.
-    :type U1s:      numpy.array(trajectories, len(times) - 1)
-    :param U2s:     Samples from a standard-normal distribution used to
-                    construct multiple-Ito increments :math:`\Delta Z` for each
-                    time interval for each trajectory.
-    :type U2s:      numpy.array(trajectories, len(times) - 1)
+    :param integrator:      Function to prepare arguments for the integrator.
+    :type integrator:       Integrator object with method ``integrate``.
+    :param rho_0:           The initial state of the system
+    :type rho_0:            numpy.array
+    :param times:           A sequence of time points for which to solve for rho
+    :type times:            list(real)
+    :param U1s_arr:         Samples from a standard-normal distribution used to
+                            construct Wiener increments :math:`\Delta W` for
+                            each time interval for each trajectory.
+    :type U1s_arr:          numpy.array(trajectories, len(times) - 1)
+    :param U2s_arr:         Samples from a standard-normal distribution used to
+                            construct multiple-Ito increments :math:`\Delta Z`
+                            for each time interval for each trajectory.
+    :type U2s_arr:          numpy.array(trajectories, len(times) - 1)
     :param trajectories:    Number of trajectories to calculate the convergence
-                            for
+                            for (ignored if U1s_arr and U2s_arr are supplied).
     :type trajectories:     int
+    :param n_jobs:          Number of parallel jobs (used by
+                            ``joblib.Parallel``)
+    :type n_jobs:           int
     :returns:               List of convergence rates.
 
     '''
 
-    keyword_args = prep_homodyne_gauss_1_5(rho_0, c_op, M_sq, N, H, basis)
-    # keyword_args = prep_fn(rho_0, c_op, M_sq, N, H, basis)
-
     increments = len(times) - 1
-    if U1s is None:
-        U1s = np.random.randn(trajectories, increments)
-    if U2s is None:
-        U2s = np.random.randn(trajectories, increments)
+    if U1s_arr is None:
+        U1s_arr = np.random.randn(trajectories, increments)
+    if U2s_arr is None:
+        U2s_arr = np.random.randn(trajectories, increments)
 
-    # Calculate times and random variables for the double and quadruple
-    # intervals
-    times_2, U1s_2, U2s_2 = double_increments(times, U1s, U2s)
-    times_4, U1s_4, U2s_4 = double_increments(times_2, U1s_2, U2s_2)
+    rates = Parallel(n_jobs=n_jobs)(delayed(calc_rate)(integrator, rho_0, times,
+                                                       U1s, U2s)
+                                    for U1s, U2s in zip(U1s_arr, U2s_arr))
 
-    meta_kwargs = [{'integrator_fn': integrator_fn,
-                    'keyword_args': keyword_args, 'times': times, 'U1s': U1,
-                    'U2s': U2, 'times_2': times_2, 'U1s_2': U1_2, 'U2s_2': U2_2,
-                    'times_4': times_4, 'U1s_4': U1_4, 'U2s_4': U2_4}
-                   for U1, U2, U1_2, U2_2, U1_4, U2_4
-                   in zip(U1s, U2s, U1s_2, U2s_2, U1s_4, U2s_4)]
-
-    """
-    rates = Parallel(n_jobs=2)(delayed(homodyne_strong_calc_rate)(**meta_kwarg)
-                               for meta_kwarg in meta_kwargs)
-    rates = np.zeros(trajectories)
-
-
-
-    for index in range(trajectories):
-        rhos = integrator_fn(*arguments, ts=times, U1s=U1s[index],
-                             U2s=U2s[index])
-        rhos_2 = integrator_fn(*arguments, ts=times_2, U1s=U1s_2[index],
-                               U2s=U2s_2[index])
-        rhos_4 = integrator_fn(*arguments, ts=times_4, U1s=U1s_4[index],
-                               U2s=U2s_4[index])
-
-        rates[index] = (np.log(l1_norm(rhos_4[-1] - rhos_2[-1])) -
-                        np.log(l1_norm(rhos_2[-1] - rhos[-1])))/np.log(2)
-    """
-
-
-    return meta_kwargs
+    return rates
