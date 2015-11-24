@@ -35,3 +35,10 @@ sde
 .. automodule:: sde
    :synopsis:
    :members:
+
+grid_conv
+---------
+
+.. automodule:: grid_conv
+   :synopsis:
+   :members:
