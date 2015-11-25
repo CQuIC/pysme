@@ -7,6 +7,7 @@
 import sympy as sp
 import numpy as np
 from numpy import sqrt
+from itertools import product
 
 def directsum(mat_a, mat_b):
     """Calculate the direct sum of two sympy matrices
@@ -54,8 +55,9 @@ def gellmann(j, k, d):
     r"""Returns a generalized Gell-Mann matrix of dimension d. According to the
     convention in *Bloch Vectors for Qubits* by Bertlmann and Krammer (2008),
     returns :math:`\Lambda^j` for :math:`1\leq j=k\leq d-1`,
-    :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`, and
-    :math:`\Lambda^{jk}_a` for :math:`1\leq j<k\leq d`.
+    :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`,
+    :math:`\Lambda^{jk}_a` for :math:`1\leq j<k\leq d`, and
+    :math:`I` for :math:`j=k=d`.
 
     :param j: First index for generalized Gell-Mann matrix
     :type j:  positive integer
@@ -84,3 +86,10 @@ def gellmann(j, k, d):
         gjkd = np.diag([1 + 0.j for n in range(1, d + 1)])
 
     return gjkd
+
+def get_basis(d):
+    r'''Return a basis of orthogonal Hermitian operators on a Hilbert space of
+    dimension d, with the identity element in the last place.
+
+    '''
+    return [gellmann(j, k, d) for j, k in product(range(1, d + 1), repeat=2)]

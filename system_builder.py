@@ -48,6 +48,29 @@ def vectorize(operator, basis):
     return [np.trace(np.dot(basis_el.conj().T, operator))/
             norm_squared(basis_el) for basis_el in basis]
 
+def dualize(operator, basis):
+    r'''Take an operator to its dual vectorized form in a particular operator
+    basis.
+    
+    Designed to work in conjunction with ``vectorize`` so that, given an
+    orthogonal basis :math:`\{\Lambda^m\}` where
+    :math:`\operatorname{Tr}[{\Lambda^m}^\dagger\Lambda^n]\propto\delta_{mn}`,
+    the dual action of an operator :math:`A` on another operator :math:`B`
+    interpreted as :math:`\operatorname{Tr}[A^\dagger B]` can be easily
+    calculated by ``sum([a*b for a, b in zip(dualize(A), vectorize(B))]`` (in
+    other words it becomes an ordinaty dot product in this particular
+    representation).
+
+    :param operator:    The operator to vectorize
+    :type operator:     list(numpy.array)
+    :param basis:       The basis to vectorize the operator in
+    :type basis:        list(numpy.array)
+    :returns:           The vector components
+    :rtype:             list(complex)
+
+    '''
+    return [np.trace(np.dot(basis_el, operator.conj().T)) for basis_el in basis]
+
 def op_calc_setup(coupling_op, basis):
     """Handle the repeated tasks performed every time a superoperator matrix is
     computed.

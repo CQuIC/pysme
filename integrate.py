@@ -9,6 +9,7 @@ import numpy as np
 from scipy.integrate import odeint
 from pysme.system_builder import *
 from pysme.sde import *
+from pysme.gellmann import get_basis
 from math import sqrt
 
 def b_dx_b(G2, k_T_G, G, k_T, rho):
@@ -96,17 +97,59 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
                    rho) + (k_T_G2_rho_dot + 6*k_rho_dot*k_T_G_rho_dot +
                            6*k_rho_dot**3)*rho)
 
+class Solution:
+    r'''Integrated solution to an ordinary or stochastic differential
+    equation. Currently just packages the vectorized solution with the basis
+    it is vectorized with respect to, but eventually will include functions to
+    conveniently calculate operator expectation values and other things one
+    might care about without wanting to worry about the particular
+    representation chosen for numerical integration.
+
+    '''
+    def __init__(self, vec_soln, basis):
+        self.vec_soln = vec_soln
+        self.basis = basis
+
+    def get_expectations(self, observable):
+        r'''Return the expectation values of an observable for all the
+        calculated times.
+
+        '''
+        dual = np.array([comp.real for comp in dualize(observable, self.basis)])
+        return [np.dot(dual, state)[0] for state in self.vec_soln]
+
 class GaussIntegrator:
     r'''Template class with most basic constructor shared by all integrators
     of Gaussian ordinary and stochastic master equations.
 
+    :param c_op:    The coupling operator
+    :type c_op:     numpy.array
+    :param M_sq:    The squeezing parameter
+    :type M_sq:     complex
+    :param N:       The thermal parameter
+    :type N:        positive real
+    :param H:       The plant Hamiltonian
+    :type H:        numpy.array
+    :param basis:   The Hermitian basis to vectorize the operators in terms of
+                    (with the component proportional to the identity in last
+                    place). If no basis is provided the generalized Gell-Mann
+                    basis will be used.
+    :type basis:    list(numpy.array)
+
     '''
-    def __init__(self, c_op, M_sq, N, H, basis):
-        self.basis = basis
-        self.Q = (N + 1)*diffusion_op(c_op, basis[:-1]) + \
-                 N*diffusion_op(c_op.conj().T, basis[:-1]) + \
-                 double_comm_op(c_op, M_sq, basis[:-1]) + \
-                 hamiltonian_op(H, basis[:-1])
+    def __init__(self, c_op, M_sq, N, H, basis=None):
+        if basis is None:
+            d = c_op.shape[0]
+            self.basis = get_basis(d)
+        else:
+            self.basis = basis
+        self.Q = (N + 1)*diffusion_op(c_op, self.basis[:-1]) + \
+                 N*diffusion_op(c_op.conj().T, self.basis[:-1]) + \
+                 double_comm_op(c_op, M_sq, self.basis[:-1]) + \
+                 hamiltonian_op(H, self.basis[:-1])
+
+    def integrate(self, rho_0, times):
+        raise NotImplementedError
 
 class UncondGaussIntegrator(GaussIntegrator):
     r'''Integrator for an unconditional Gaussian master equation.
@@ -121,13 +164,11 @@ class UncondGaussIntegrator(GaussIntegrator):
     :type H:        numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
                     (with the component proportional to the identity in last
-                    place)
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis):
-        super(UncondGaussIntegrator, self).__init__(c_op, M_sq, N, H, basis)
-
     def a_fn(self, rho, t):
         return np.dot(self.Q, rho)
 
@@ -148,7 +189,8 @@ class UncondGaussIntegrator(GaussIntegrator):
 
         '''
         rho_0_vec = [comp.real for comp in vectorize(rho_0, self.basis)]
-        return odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
+        vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
+        return Solution(vec_soln, self.basis)
 
 class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     r'''Template class for integrators of the Gaussian homodyne stochastic
@@ -164,16 +206,18 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     :type H:        numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
                     (with the component proportional to the identity in last
-                    place)
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis):
+    def __init__(self, c_op, M_sq, N, H, basis=None):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis)
         self.G, self.k_T = weiner_op(((N + M_sq.conjugate() + 1)*c_op -
                                       (N + M_sq)*c_op.conj().T)/
-                                     sqrt(2*(M_sq.real + N) + 1), basis[:-1])
+                                     sqrt(2*(M_sq.real + N) + 1),
+                                     self.basis[:-1])
 
 class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
     r'''Template class for integrators of the Gaussian homodyne stochastic
@@ -189,11 +233,12 @@ class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
     :type H:        numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
                     (with the component proportional to the identity in last
-                    place)
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis):
+    def __init__(self, c_op, M_sq, N, H, basis=None):
         super(Strong_1_0_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis)
         self.k_T_G = np.dot(self.k_T, self.G)
@@ -213,11 +258,12 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     :type H:        numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
                     (with the component proportional to the identity in last
-                    place)
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis):
+    def __init__(self, c_op, M_sq, N, H, basis=None):
         super(Strong_1_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis)
         self.G3 = np.dot(self.G2, self.G)
@@ -241,7 +287,8 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     :type H:        numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
                     (with the component proportional to the identity in last
-                    place)
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
     :type basis:    list(numpy.array)
 
     '''
@@ -281,8 +328,9 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
-        return milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec, times,
-                        U1s)
+        vec_soln = milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
+                            times, U1s)
+        return Solution(vec_soln, self.basis)
 
 class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
     r'''Integrator included to test if grid convergence could identify an error
@@ -297,8 +345,9 @@ class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
-        return faulty_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
-                               times, U1s)
+        vec_soln = faulty_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
+                                   rho_0_vec, times, U1s)
+        return Solution(vec_soln, self.basis)
 
 class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     r"""Integrator for the conditional Gaussian master equation that uses
@@ -314,7 +363,8 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     :type H:        numpy.array
     :param basis:   The Hermitian basis to vectorize the operators in terms of
                     (with the component proportional to the identity in last
-                    place)
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
     :type basis:    list(numpy.array)
 
     """
@@ -370,7 +420,8 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         if U2s is None:
             U2s = np.random.randn(len(times) -1)
 
-        return time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
-                                   self.b_dx_a_fn, self.a_dx_b_fn,
-                                   self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
-                                   rho_0_vec, times, U1s, U2s)
+        vec_soln = time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
+                                       self.b_dx_a_fn, self.a_dx_b_fn,
+                                       self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
+                                       rho_0_vec, times, U1s, U2s)
+        return Solution(vec_soln, self.basis)
