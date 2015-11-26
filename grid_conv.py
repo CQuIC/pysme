@@ -91,9 +91,9 @@ def calc_rate(integrator, rho_0, times, U1s=None, U2s=None):
     times_2, U1s_2, U2s_2 = double_increments(times, U1s, U2s)
     times_4, U1s_4, U2s_4 = double_increments(times_2, U1s_2, U2s_2)
 
-    rhos = integrator.integrate(rho_0, times, U1s, U2s)
-    rhos_2 = integrator.integrate(rho_0, times_2, U1s_2, U2s_2)
-    rhos_4 = integrator.integrate(rho_0, times_4, U1s_4, U2s_4)
+    rhos = integrator.integrate(rho_0, times, U1s, U2s).vec_soln
+    rhos_2 = integrator.integrate(rho_0, times_2, U1s_2, U2s_2).vec_soln
+    rhos_4 = integrator.integrate(rho_0, times_4, U1s_4, U2s_4).vec_soln
     rate = (np.log(l1_norm(rhos_4[-1] - rhos_2[-1])) -
             np.log(l1_norm(rhos_2[-1] - rhos[-1])))/np.log(2)
 
