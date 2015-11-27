@@ -2,6 +2,7 @@ from nose.tools import assert_almost_equal, assert_equal
 import pysme.gellmann as gm
 import pysme.gramschmidt as gs
 import pysme.system_builder as sb
+import pysme.grid_conv as gc
 import numpy as np
 
 def check_orthogonal(A, B):
@@ -164,3 +165,45 @@ def test_system_builder():
                          zip(row, basis(2))]) for row in orth_mat]
     check_vectorize(c2_operators, mixed_basis2)
     check_vectorize(c3_operators, basis(3))
+
+def new_dW_from_dW(dW_2n, dW_2n_1):
+    return dW_2n + dW_2n_1
+
+def new_dW_from_U(new_U1_n, new_dt):
+    return new_U1_n*np.sqrt(new_dt)
+
+def new_dZ_from_dZ(dZ_2n, dZ_2n_1, dW_2n, dt):
+    return dZ_2n + dt*dW_2n + dZ_2n_1
+
+def new_dZ_from_U(new_U1_n, new_U2_n, new_dt):
+    return new_dt**(3/2)*(new_U1_n + new_U2_n/np.sqrt(3))/2
+
+def test_double_increments():
+    r'''Make sure increments are doubled so that
+
+    .. math::
+
+       \tilde{\Delta}&=2\Delta \\
+       \Delta\tilde{W}_n&=\Delta W_{2n}+\Delta W_{2n+1} \\
+       &=\tilde{U}_{1,n}\sqrt{\tilde{\Delta}} \\
+       \Delta\tilde{Z}_n&=\Delta Z_{2n}+\Delta_{2n+1}\Delta W_{2n}+
+       \Delta Z_{2n+1}
+
+    '''
+    np.random.seed(1472)
+    dt = 0.1
+    steps = 10
+    times = np.linspace(0, steps*dt, steps + 1)
+    U1s = np.random.randn(steps)
+    U2s = np.random.randn(steps)
+    dWs = U1s*np.sqrt(dt)
+    dZs = dt**(3/2)*(U1s + U2s/np.sqrt(3))/2
+    new_times, new_U1s, new_U2s = gc.double_increments(times, U1s, U2s)
+    new_dt = new_times[1] - new_times[0]
+    assert_almost_equal(2*dt, new_dt, 7)
+    for n in range(steps//2):
+        assert_almost_equal(new_dW_from_dW(dWs[2*n], dWs[2*n+1]),
+                            new_dW_from_U(new_U1s[n], new_dt), 7)
+        assert_almost_equal(new_dZ_from_dZ(dZs[2*n], dZs[2*n+1], dWs[2*n], dt),
+                            new_dZ_from_U(new_U1s[n], new_U2s[n], new_dt), 7)
+
