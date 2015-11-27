@@ -59,7 +59,7 @@ def a_dx_b(GQ, k_T, Q, k_T_Q, rho):
                         \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})`.
 
     '''
-    return np.dot(GQ + np.dot(k_T, rho)*Q, rho) + np.dot(k_T_Q, rho)
+    return np.dot(GQ + np.dot(k_T, rho)*Q, rho) + np.dot(k_T_Q, rho)*rho
 
 def a_dx_a(Q2, rho):
     r'''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
