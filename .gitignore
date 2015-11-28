@@ -1,4 +1,7 @@
+build/*
+dist/*
+pysme.egg-info/*
 *.swp
 *.pyc
-_build/*
+doc/_build/*
 __pycache__/*
