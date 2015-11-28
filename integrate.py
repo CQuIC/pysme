@@ -93,7 +93,7 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
     k_rho_dot = np.dot(k_T, rho)
     k_T_G_rho_dot = np.dot(k_T_G, rho)
     k_T_G2_rho_dot = np.dot(k_T_G2, rho)
-    return (np.dot(G3 + 3*k_rho_dot*G2 + 3*(k_T_G_rho_dot + 2*k_rho_dot)*G,
+    return (np.dot(G3 + 3*k_rho_dot*G2 + 3*(k_T_G_rho_dot + 2*k_rho_dot**2)*G,
                    rho) + (k_T_G2_rho_dot + 6*k_rho_dot*k_T_G_rho_dot +
                            6*k_rho_dot**3)*rho)
 
