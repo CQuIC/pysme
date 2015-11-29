@@ -109,7 +109,8 @@ The new terms in the higher-order update formula are given below:
    \vec{\rho})&=Q^2\vec{\rho} \\
    \left(\vec{b}(\vec{\rho})\cdot\vec{\nabla}_{\vec{\rho}}\right)^2\,\vec{b}(
    \vec{\rho})&=G^3\vec{\rho}+3(\vec{k}\cdot\vec{\rho})G^2\vec{\rho}+
-   3\left(\vec{k}^TG\vec{\rho}+2(\vec{k}\cdot\vec{\rho})\right)G\vec{\rho}+ \\
+   3\left(\vec{k}^TG\vec{\rho}+
+   2(\vec{k}\cdot\vec{\rho})^2\right)G\vec{\rho}+ \\
    &\quad\left(\vec{k}^TG^2\vec{\rho}+6(\vec{k}\cdot\vec{\rho})
    \vec{k}^TG\vec{\rho}+6(\vec{k}\cdot\vec{\rho})^3\right)\vec{\rho}
    \end{align}
