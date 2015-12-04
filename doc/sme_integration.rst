@@ -55,9 +55,15 @@ For
 
 .. math::
 
-   b^\nu\partial_\nu b^\mu=\left(k_\nu G^\nu_\sigma\rho^\mu+
+   \begin{align}
+   b^\nu\partial_\nu b^\mu&=\left(k_\nu G^\nu_\sigma\rho^\mu+
    G^\mu_\nu G^\nu_\sigma+2k_\nu\rho^\nu(G^\mu_\sigma
-   +k_\sigma\rho^\mu)\right)\rho^\sigma
+   +k_\sigma\rho^\mu)\right)\rho^\sigma \\
+   b^\nu\partial_\nu b^\mu\hat{e}_\mu&=\left(
+   \left(\vec{k}^\mathsf{T}G\vec{\rho}\right)
+   +G^2+2(\vec{k}\cdot\vec{\rho})\left(G+\vec{k}\cdot
+   \vec{\rho}\right)\right)\vec{\rho}
+   \end{align}
 
 Order 1.5 Taylor scheme
 -----------------------
@@ -69,28 +75,22 @@ explicit time dependence, as we have in our problem):
 .. math::
 
    \begin{align}
-   \vec{\rho}_{i+1}&=\vec{\rho}_i+\vec{a}(\vec{\rho}_i)\Delta t_i+
-   \vec{b}(\vec{\rho}_i)\Delta W_i+
-   \frac{1}{2}\left(\vec{b}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
-   \right)\vec{b}(\vec{\rho}_i)\left((\Delta W_i)^2-\Delta t_i\right)+ \\
-   &\quad\left(\vec{b}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
-   \right)\vec{a}(\vec{\rho}_i)\Delta Z_i+\left(\vec{a}(\vec{\rho}_i)\cdot
-   \vec{\nabla}_{\vec{\rho}}+\frac{1}{2}\vec{b}^\mathsf{T}(\vec{\rho})D^2
-   \vec{b}(\vec{\rho})\right)
-   \vec{b}(\vec{\rho}_i)\left(
-   \Delta W_i\Delta t_i-\Delta Z_i\right)+ \\
-   &\quad\frac{1}{2}\left(\vec{a}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
-   +\frac{1}{2}\vec{b}^\mathsf{T}(\vec{\rho})D^2
-   \vec{b}(\vec{\rho})\right)\vec{a}(\vec{\rho}_i)\Delta t_i^2+
-   \frac{1}{2}\left(
-   \vec{b}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
-   \right)^2\,\vec{b}(\vec{\rho}_i)\left(\frac{1}{3}(\Delta W_i)^2-
-   \Delta t_i\right)\Delta W_i
+   \rho^\mu_{i+1}&=\rho^\mu_i+a^\mu_i\Delta t_i+
+   b^\mu_i\Delta W_i+\frac{1}{2}b^\nu_i\partial_\nu b^\mu_i\left(
+   (\Delta W_i)^2-\Delta t_i\right)+ \\
+   &\quad b^\nu_i\partial_\nu a^\mu_i\Delta Z_i
+   +\left(a^\nu_i\partial_\nu
+   +\frac{1}{2}b^\nu_ib^\sigma_i\partial_\nu\partial_\sigma\right)
+   b^\mu_i\left(\Delta W_i\Delta t_i-\Delta Z_i\right)+ \\
+   &\quad\frac{1}{2}\left(a^\nu_i\partial_\nu
+   +\frac{1}{2}b^\nu_ib^\sigma_i\partial_\nu\partial_\sigma\right)
+   a^\mu_i\Delta t_i^2
+   +\frac{1}{2}b^\nu_i\partial_\nu b^\sigma_i\partial_\sigma b^\mu_i\left(
+   \frac{1}{3}(\Delta W_i)^2-\Delta t_i\right)\Delta W_i
    \end{align}
 
-Where :math:`\vec{b}^\mathsf{T}(\vec{\rho})D^2\vec{b}(\vec{\rho})`
-is horrible shorthand for
-:math:`\sum_{j,k}b^jb^k\frac{\partial^2}{\partial x^j\partial x^k}`. These terms are currently missing from the python implementation.
+The :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma` terms are currently
+missing from the python implementation.
 
 Recall from :doc:`vectorizations` that:
 
@@ -119,19 +119,23 @@ The new terms in the higher-order update formula are given below:
 .. math::
 
    \begin{align}
-   \left(\vec{b}(\vec{\rho})\cdot\vec{\nabla}_{\vec{\rho}}\right)\vec{a}(
-   \vec{\rho})&=QG\vec{\rho}+(\vec{k}\cdot\vec{\rho})Q\vec{\rho} \\
-   \left(\vec{a}(\vec{\rho})\cdot\vec{\nabla}_{\vec{\rho}}\right)\vec{b}(
-   \vec{\rho})&=GQ\vec{\rho}+(\vec{k}\cdot\vec{\rho})Q\vec{\rho}+\left(
-   \vec{k}^TQ\vec{\rho}\right)\vec{\rho} \\
-   \left(\vec{a}(\vec{\rho})\cdot\vec{\nabla}_{\vec{\rho}}\right)\vec{a}(
-   \vec{\rho})&=Q^2\vec{\rho} \\
-   \left(\vec{b}(\vec{\rho})\cdot\vec{\nabla}_{\vec{\rho}}\right)^2\,\vec{b}(
-   \vec{\rho})&=G^3\vec{\rho}+3(\vec{k}\cdot\vec{\rho})G^2\vec{\rho}+
-   3\left(\vec{k}^TG\vec{\rho}+
+   b^\nu\partial_\nu a^\mu\hat{e}_\mu&=QG\vec{\rho}
+   +(\vec{k}\cdot\vec{\rho})Q\vec{\rho} \\
+   a^\nu\partial_\nu b^\mu\hat{e}_\mu&=GQ\vec{\rho}+
+   (\vec{k}\cdot\vec{\rho})Q\vec{\rho}+\left(
+   \vec{k}^\mathsf{T}Q\vec{\rho}\right)\vec{\rho} \\
+   a^\nu\partial_\nu a^\mu\hat{e}_\mu&=Q^2\vec{\rho} \\
+   b^\nu\partial_\nu b^\sigma\partial_\sigma b^\mu\hat{e}_\mu&=G^3\vec{\rho}
+   +3(\vec{k}\cdot\vec{\rho})G^2\vec{\rho}+
+   3\left(\vec{k}^\mathsf{T}G\vec{\rho}+
    2(\vec{k}\cdot\vec{\rho})^2\right)G\vec{\rho}+ \\
-   &\quad\left(\vec{k}^TG^2\vec{\rho}+6(\vec{k}\cdot\vec{\rho})
-   \vec{k}^TG\vec{\rho}+6(\vec{k}\cdot\vec{\rho})^3\right)\vec{\rho}
+   &\quad\left(\vec{k}^\mathsf{T}G^2\vec{\rho}+6(\vec{k}\cdot\vec{\rho})
+   \vec{k}^\mathsf{T}G\vec{\rho}
+   +6(\vec{k}\cdot\vec{\rho})^3\right)\vec{\rho} \\
+   b^\nu b^\sigma\partial_\nu\partial_\sigma b^\mu\hat{e}_\mu&=2\left(
+   \vec{k}^\mathsf{T}G\vec{\rho}+(\vec{k}\cdot\vec{\rho})^2\right)\left(
+   G\vec{\rho}+(\vec{k}\cdot\vec{\rho})\vec{\rho}\right) \\
+   b^\nu b^\sigma\partial_\nu\partial_\sigma a^\mu\hat{e}_\mu&=0
    \end{align}
 
 We explore testing the convergence rates in :doc:`testing`.
