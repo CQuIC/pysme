@@ -64,14 +64,22 @@ explicit time dependence, as we have in our problem):
    \right)\vec{b}(\vec{\rho}_i)\left((\Delta W_i)^2-\Delta t_i\right)+ \\
    &\quad\left(\vec{b}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
    \right)\vec{a}(\vec{\rho}_i)\Delta Z_i+\left(\vec{a}(\vec{\rho}_i)\cdot
-   \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho}_i)\left(
+   \vec{\nabla}_{\vec{\rho}}+\frac{1}{2}\vec{b}^\mathsf{T}(\vec{\rho})D^2
+   \vec{b}(\vec{\rho})\right)
+   \vec{b}(\vec{\rho}_i)\left(
    \Delta W_i\Delta t_i-\Delta Z_i\right)+ \\
    &\quad\frac{1}{2}\left(\vec{a}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
-   \right)\vec{a}(\vec{\rho}_i)\Delta t_i^2+\frac{1}{2}\left(
+   +\frac{1}{2}\vec{b}^\mathsf{T}(\vec{\rho})D^2
+   \vec{b}(\vec{\rho})\right)\vec{a}(\vec{\rho}_i)\Delta t_i^2+
+   \frac{1}{2}\left(
    \vec{b}(\vec{\rho}_i)\cdot\vec{\nabla}_{\vec{\rho}}
    \right)^2\,\vec{b}(\vec{\rho}_i)\left(\frac{1}{3}(\Delta W_i)^2-
    \Delta t_i\right)\Delta W_i
    \end{align}
+
+Where :math:`\vec{b}^\mathsf{T}(\vec{\rho})D^2\vec{b}(\vec{\rho})`
+is horrible shorthand for
+:math:`\sum_{j,k}b^jb^k\frac{\partial^2}{\partial x^j\partial x^k}`. These terms are currently missing from the python implementation.
 
 Recall from :doc:`vectorizations` that:
 
