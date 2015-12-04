@@ -28,25 +28,36 @@ What if we are interested in a vector-valued equation:
    d\vec{\rho}=\vec{a}(\vec{\rho},t)dt+\vec{b}(\vec{\rho},t)dW
 
 The way to generalize the Milstein scheme (while still restricting ourselves to
-a scalar-valued Wiener process) is:
+a scalar-valued Wiener process) is
 
 .. math::
 
-   \vec{\rho}_{i+1}=\vec{\rho}_i+\vec{a}(\vec{\rho}_i,t_i)\Delta t_i+
-   \vec{b}(\vec{\rho}_i,t_i)\Delta W_i+
-   \frac{1}{2}\left(\vec{b}(\vec{\rho}_i,t_i)\cdot\vec{\nabla}_{\vec{\rho}}
-   \right)\vec{b}(\vec{\rho}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
+   \rho^\mu_{i+1}=\rho^\mu_i+a^\mu_i\Delta t_i+b^\mu_i\Delta W_i+
+   \frac{1}{2}b^\nu_i\partial_\nu b^\mu_i\left((\Delta W_i)^2
+   -\Delta t_i\right),
+
+where I have adopted an index convention for vectors such that
+
+.. math::
+
+   \begin{align}
+   \vec{\rho}&=\rho^\mu\hat{e}_\mu \\
+   a^\mu_i&=a^\mu(\vec{\rho}_i,t_i) \\
+   \partial_\nu&=\frac{\partial}{\partial\rho^\nu},
+   \end{align}
+
+and indices that appear in both upper and lower positions in the same term are
+implicitly summer over.
 
 For
-:math:`\vec{b}(\vec{\rho},t)=(G+\vec{k}\cdot\vec{\rho})\vec{\rho}` as defined in
+:math:`b^\mu=G^\mu_\nu\rho^\nu+k_\nu\rho^\nu\rho^\mu` as defined in
 :doc:`vectorizations` we can write:
 
 .. math::
 
-   \left(\vec{b}(\vec{\rho},t)\cdot\vec{\nabla}_{\vec{\rho}}\right)
-   \vec{b}(\vec{\rho},t)=\left(\left(\vec{k}^TG\vec{\rho}\right)+G^2+
-   2(\vec{k}\cdot\vec{\rho})\left(G+
-   \vec{k}\cdot\vec{\rho}\right)\right)\vec{\rho}
+   b^\nu\partial_\nu b^\mu=\left(k_\nu G^\nu_\sigma\rho^\mu+
+   G^\mu_\nu G^\nu_\sigma+2k_\nu\rho^\nu(G^\mu_\sigma
+   +k_\sigma\rho^\mu)\right)\rho^\sigma
 
 Order 1.5 Taylor scheme
 -----------------------
