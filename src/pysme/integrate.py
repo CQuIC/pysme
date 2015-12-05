@@ -97,6 +97,23 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
                    rho) + (k_T_G2_rho_dot + 6*k_rho_dot*k_T_G_rho_dot +
                            6*k_rho_dot**3)*rho)
 
+def b_b_dx_dx_b(G, k_T, k_T_G, rho):
+    r'''Function to return the
+    :math:`b^\nu b^\sigma\partial_nu\partial_\sigma b^\mu\hat{e}_\mu` term for
+    stochastic integration.
+
+    :param G:           :math:`G`.
+    :param k_T:         :math:`\vec{k}^T`.
+    :param k_T_G:       :math:`\vec{k}^TG`.
+    :param rho:         :math:`\rho`.
+    :returns:           :math:`b^\nu b^\sigma\partial_nu\partial_\sigma
+                        b^\mu\hat{e}_\mu`
+
+    '''
+    k_rho_dot = np.dot(k_T, rho)
+    k_T_G_rho_dot = np.dot(k_T_G, rho)
+    return 2*(k_T_G_rho_dot + k_rho_dot**2)*(np.dot(G, rho) + k_rho_dot*rho)
+
 class Solution:
     r'''Integrated solution to an ordinary or stochastic differential
     equation. Currently just packages the vectorized solution with the basis
@@ -390,6 +407,12 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         return b_dx_b_dx_b(self.G3, self.G2, self.G, self.k_T, self.k_T_G,
                            self.k_T_G2, rho)
 
+    def b_b_dx_dx_b_fn(self, rho):
+        return b_b_dx_dx_b(self.G, self.k_T, self.k_T_G, rho)
+
+    def b_b_dx_dx_a_fn(self, rho):
+        return 0
+
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         r'''Integrate for a sequence of times with a given initial condition
         (and optionally specified white noise).
@@ -423,5 +446,7 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         vec_soln = time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
                                        self.b_dx_a_fn, self.a_dx_b_fn,
                                        self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
+                                       self.b_b_dx_dx_b_fn,
+                                       self.b_b_dx_dx_a_fn,
                                        rho_0_vec, times, U1s, U2s)
         return Solution(vec_soln, self.basis)

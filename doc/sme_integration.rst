@@ -89,9 +89,6 @@ explicit time dependence, as we have in our problem):
    \frac{1}{3}(\Delta W_i)^2-\Delta t_i\right)\Delta W_i
    \end{align}
 
-The :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma` terms are currently
-missing from the python implementation.
-
 Recall from :doc:`vectorizations` that:
 
 .. math::

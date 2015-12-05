@@ -68,7 +68,8 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     return X
 
 def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
-                        b_dx_b_dx_b, X0, ts, U1s, U2s):
+                        b_dx_b_dx_b, b_b_dx_dx_b, b_b_dx_dx_a,
+                        X0, ts, U1s, U2s):
     r"""Integrate a system of ordinary stochastic differential equations with
     time-independent coefficients subject to scalar noise:
 
@@ -123,6 +124,14 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
                             :math:`\left(\vec{b}(\vec{X})\cdot
                             \vec{\nabla}_{\vec{X}}\right)^2\vec{b}(\vec{X})`
     :type b_dx_b_dx_b:      callable(X)
+    :param b_b_dx_dx_b:     Computes
+                            :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
+                            b^\mu\hat{e}_\mu`.
+    :type b_dx_b_dx_b:      callable(X)
+    :param b_b_dx_dx_a:     Computes
+                            :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
+                            a^\mu\hat{e}_\mu`.
+    :type b_dx_b_dx_a:      callable(X)
     :param X0:              Initial condition on X
     :type X0:               array
     :param ts:              A sequence of time points for which to solve for X.
@@ -154,7 +163,8 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
     for t, dt, dW, dZ in zip(ts[:-1], dts, dWs, dZs):
         X = Xs[-1]
         Xs.append(X + drift(X)*dt + diffusion(X)*dW + b_dx_b(X)*(dW**2 - dt)/2 +
-                  b_dx_a(X)*dZ + a_dx_b(X)*(dW*dt - dZ) + a_dx_a(X)*dt**2/2 +
+                  b_dx_a(X)*dZ + (a_dx_b(X)+b_b_dx_dx_b(X)/2)*(dW*dt - dZ) +
+                  (a_dx_a(X)+b_b_dx_dx_a(X)/2)*dt**2/2 +
                   b_dx_b_dx_b(X)*(dW**2/3 - dt)*dW/2)
 
     return Xs
