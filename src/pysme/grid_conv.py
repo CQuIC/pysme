@@ -4,7 +4,6 @@
 
 import numpy as np
 from pysme.integrate import *
-from joblib import Parallel, delayed
 
 def l1_norm(vec):
     return np.sum(np.abs(vec))
@@ -98,43 +97,3 @@ def calc_rate(integrator, rho_0, times, U1s=None, U2s=None):
             np.log(l1_norm(rhos_2[-1] - rhos[-1])))/np.log(2)
 
     return rate
-
-def strong_grid_convergence(integrator, rho_0, times, U1s_arr=None,
-                            U2s_arr=None, trajectories=256, n_jobs=1):
-    r'''Calculate the strong convergence rate for an integrator.
-
-    :param integrator:      Function to prepare arguments for the integrator.
-    :type integrator:       Integrator object with method ``integrate``.
-    :param rho_0:           The initial state of the system
-    :type rho_0:            numpy.array
-    :param times:           A sequence of time points for which to solve for rho
-    :type times:            list(real)
-    :param U1s_arr:         Samples from a standard-normal distribution used to
-                            construct Wiener increments :math:`\Delta W` for
-                            each time interval for each trajectory.
-    :type U1s_arr:          numpy.array(trajectories, len(times) - 1)
-    :param U2s_arr:         Samples from a standard-normal distribution used to
-                            construct multiple-Ito increments :math:`\Delta Z`
-                            for each time interval for each trajectory.
-    :type U2s_arr:          numpy.array(trajectories, len(times) - 1)
-    :param trajectories:    Number of trajectories to calculate the convergence
-                            for (ignored if U1s_arr and U2s_arr are supplied).
-    :type trajectories:     int
-    :param n_jobs:          Number of parallel jobs (used by
-                            ``joblib.Parallel``)
-    :type n_jobs:           int
-    :returns:               List of convergence rates.
-
-    '''
-
-    increments = len(times) - 1
-    if U1s_arr is None:
-        U1s_arr = np.random.randn(trajectories, increments)
-    if U2s_arr is None:
-        U2s_arr = np.random.randn(trajectories, increments)
-
-    rates = Parallel(n_jobs=n_jobs)(delayed(calc_rate)(integrator, rho_0, times,
-                                                       U1s, U2s)
-                                    for U1s, U2s in zip(U1s_arr, U2s_arr))
-
-    return rates
