@@ -98,7 +98,7 @@ Recall from :doc:`vectorizations` that:
    Q&:=(N+1)D(\vec{c})+ND(\vec{c}^*)+E(M,\vec{c})+F(\vec{h})
    \end{align}
 
-:math:`\Delta Z` is a new random variavle related to :math:`\Delta W`:
+:math:`\Delta Z` is a new random variable related to :math:`\Delta W`:
 
 .. math::
 

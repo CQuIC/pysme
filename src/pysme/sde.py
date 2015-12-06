@@ -182,10 +182,20 @@ def faulty_milstein(drift, diffusion, b_dx_b, X0, ts, Us):
 
     .. math::
 
-       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
-       \vec{b}(\vec{X}_i,t_i)\Delta W_i+
-       \left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
-       \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
+       \begin{align}
+       \rho^\mu_{i+1}&=\rho^\mu_i+a^\mu_i\Delta t_i+
+       b^\mu_i\Delta W_i+\frac{1}{2}b^\nu_i\partial_\nu b^\mu_i\left(
+       (\Delta W_i)^2-\Delta t_i\right)+ \\
+       &\quad b^\nu_i\partial_\nu a^\mu_i\Delta Z_i
+       +\left(a^\nu_i\partial_\nu
+       +\frac{1}{2}b^\nu_ib^\sigma_i\partial_\nu\partial_\sigma\right)
+       b^\mu_i\left(\Delta W_i\Delta t_i-\Delta Z_i\right)+ \\
+       &\quad\frac{1}{2}\left(a^\nu_i\partial_\nu
+       +\frac{1}{2}b^\nu_ib^\sigma_i\partial_\nu\partial_\sigma\right)
+       a^\mu_i\Delta t_i^2
+       +\frac{1}{2}b^\nu_i\partial_\nu b^\sigma_i\partial_\sigma b^\mu_i\left(
+       \frac{1}{3}(\Delta W_i)^2-\Delta t_i\right)\Delta W_i
+       \end{align}
 
     where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
     distributed random variable with mean 0 and variance 1.
