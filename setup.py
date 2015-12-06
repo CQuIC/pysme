@@ -4,8 +4,6 @@ requires = [
         'Cython',
         'numpy',
         'scipy',
-        'sympy',
-        'joblib',
          ]
 
 setup(name='pysme',

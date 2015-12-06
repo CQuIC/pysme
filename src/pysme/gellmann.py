@@ -4,52 +4,9 @@
 .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
-import sympy as sp
 import numpy as np
 from numpy import sqrt
 from itertools import product
-
-def directsum(mat_a, mat_b):
-    """Calculate the direct sum of two sympy matrices
-    """
-
-    rows_a, cols_a = mat_a.shape
-    rows_b, cols_b = mat_b.shape
-    return sp.Matrix([[mat_a[(m, n)] if (m < rows_a and n < cols_a) else
-                       (0 if (m < rows_a or n < cols_a) else
-                        mat_b[(m - rows_a, n - cols_a)]) for n in
-                       range(cols_a + cols_b)] for m in range(rows_a +
-                                                              rows_b)])
-
-def H(K, d):
-    """Calculate the diagonal generalized Gell-Mann matrices
-    """
-
-    if K == 1:
-        return sp.eye(d)
-    elif K == d:
-        return sp.sqrt(2/(d*(d - 1)))*directsum(H(1, d - 1),
-                                                sp.Matrix([[1 - d]]))
-    else:
-        return directsum(H(K, d - 1), sp.Matrix([[0]]))
-
-def GellMann(K, J, d):
-    r"""Calculate the generalized Gell-Mann matrix :math:`f_{k,j}^d` for
-    :math:`k\neq j` or :math:`h_k^d` for :math:`k=j`.
-    """
-
-    d = sp.S(d)
-
-    if K < J:
-        return sp.Matrix([[1 if (j == J and k == K) or (k == J and j == K)
-                           else 0 for j in range(1, d + 1)] for k in
-                          range(1, d + 1)])
-    elif K > J:
-        return sp.Matrix([[sp.I if (j == J and k == K) else
-                           (-sp.I if (k == J and j == K) else 0) for j in
-                           range(1, d + 1)] for k in range(1, d + 1)])
-    else:
-        return H(K, d)
 
 def gellmann(j, k, d):
     r"""Returns a generalized Gell-Mann matrix of dimension d. According to the
