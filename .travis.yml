@@ -1,0 +1,14 @@
+language: python
+python:
+  - "3.4"
+# Install C libraries
+addons:
+  apt:
+    packages:
+      - gfortran
+      - libopenblas-dev
+      - liblapack-dev
+# Command to install dependencies
+install: python setup.py install
+# Command to run tests
+script: nosetests
