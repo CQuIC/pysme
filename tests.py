@@ -1,8 +1,9 @@
-from nose.tools import assert_almost_equal, assert_equal
+from nose.tools import assert_almost_equal, assert_equal, assert_true
 import pysme.gellmann as gm
 import pysme.gramschmidt as gs
 import pysme.system_builder as sb
 import pysme.grid_conv as gc
+import pysme.integrate as integrate
 import numpy as np
 
 def check_orthogonal(A, B):
@@ -207,3 +208,50 @@ def test_double_increments():
         assert_almost_equal(new_dZ_from_dZ(dZs[2*n], dZs[2*n+1], dWs[2*n], dt),
                             new_dZ_from_U(new_U1s[n], new_U2s[n], new_dt), 7)
 
+def check_convergence_rate(expected_rate, integrator, rho_0, times, U1s_arr,
+                           U2s_arr):
+    rates = [gc.calc_rate(integrator, rho_0, times, U1s, U2s)
+             for U1s, U2s in zip(U1s_arr, U2s_arr)]
+    average_rate = np.mean(np.array(rates))
+    assert_true(expected_rate - 0.25 < average_rate < expected_rate + 0.25,
+                'Average convergence rate {0} is outside of ({1}, {2})'.format(
+                    average_rate, expected_rate - 0.25, expected_rate + 0.25))
+
+def test_convergence():
+    r'''Estimate convergence rates for different integrators to see if they
+    match expected behavior.
+
+    '''
+
+    trajectories = 128
+    times = np.linspace(0, 1, 65)
+    increments = len(times) - 1
+    np.random.seed(78543287)
+    U1s_arr = np.random.randn(trajectories, increments)
+    U2s_arr = np.random.randn(trajectories, increments)
+
+    # Pauli matrices
+    X = np.array([[0. + 0.j, 1. + 0.j], [1. + 0.j, 0. + 0.j]])
+    Y = np.array([[0. + 0.j, 0. - 1.j], [0. + 1.j, 0. + 0.j]])
+    Z = np.array([[1. + 0.j, 0. + 0.j], [0. + 0.j, -1 + 0.j]])
+    Id = np.array([[1. + 0.j, 0. + 0.j], [0. + 0.j, 1. + 0.j]])
+     
+    # Evolution parameters
+    H = 1*X
+    g = 1
+    L = np.sqrt(g)*(X - 1.j*Y)/2
+     
+    # Initial Bloch vector parameters
+    r = 1
+    theta = 0
+    phi = 0
+    rho_0 = 0.5*(Id + r*(np.cos(theta)*Z +
+                 np.sin(theta)*(np.cos(phi)*X + np.sin(phi)*Y)))
+
+    milstein_integrator = integrate.MilsteinHomodyneIntegrator(L, 0, 0, H)
+    taylor_1_5_integrator = integrate.Taylor_1_5_HomodyneIntegrator(L, 0, 0, H)
+
+    check_convergence_rate(1, milstein_integrator, rho_0, times, U1s_arr,
+                           U2s_arr)
+    check_convergence_rate(1.5, taylor_1_5_integrator, rho_0, times, U1s_arr,
+                           U2s_arr)
