@@ -3,7 +3,6 @@
 '''
 
 import numpy as np
-from pysme.integrate import *
 
 def l1_norm(vec):
     return np.sum(np.abs(vec))

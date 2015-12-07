@@ -7,10 +7,9 @@
 
 import numpy as np
 from scipy.integrate import odeint
-from pysme.system_builder import *
-from pysme.sde import *
-from pysme.gellmann import get_basis
-from math import sqrt
+import pysme.system_builder as sb
+import pysme.sde as sde
+import pysme.gellmann as gm
 
 def b_dx_b(G2, k_T_G, G, k_T, rho):
     r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
@@ -132,7 +131,8 @@ class Solution:
         calculated times.
 
         '''
-        dual = np.array([comp.real for comp in dualize(observable, self.basis)])
+        dual = np.array([comp.real
+                         for comp in sb.dualize(observable, self.basis)])
         return [np.dot(dual, state)[0] for state in self.vec_soln]
 
 class GaussIntegrator:
@@ -157,16 +157,16 @@ class GaussIntegrator:
     def __init__(self, c_op, M_sq, N, H, basis=None):
         if basis is None:
             d = c_op.shape[0]
-            self.basis = get_basis(d)
+            self.basis = gm.get_basis(d)
         else:
             self.basis = basis
-        self.Q = (N + 1)*diffusion_op(c_op, self.basis[:-1]) + \
-                 N*diffusion_op(c_op.conj().T, self.basis[:-1]) + \
-                 double_comm_op(c_op, M_sq, self.basis[:-1]) + \
-                 hamiltonian_op(H, self.basis[:-1])
+        self.Q = (N + 1)*sb.diffusion_op(c_op, self.basis[:-1]) + \
+                 N*sb.diffusion_op(c_op.conj().T, self.basis[:-1]) + \
+                 sb.double_comm_op(c_op, M_sq, self.basis[:-1]) + \
+                 sb.hamiltonian_op(H, self.basis[:-1])
 
     def integrate(self, rho_0, times):
-        raise NotImplementedError
+        raise NotImplementedError()
 
 class UncondGaussIntegrator(GaussIntegrator):
     r'''Integrator for an unconditional Gaussian master equation.
@@ -205,7 +205,7 @@ class UncondGaussIntegrator(GaussIntegrator):
         :rtype:         list(numpy.array)
 
         '''
-        rho_0_vec = [comp.real for comp in vectorize(rho_0, self.basis)]
+        rho_0_vec = [comp.real for comp in sb.vectorize(rho_0, self.basis)]
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return Solution(vec_soln, self.basis)
 
@@ -231,10 +231,10 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     def __init__(self, c_op, M_sq, N, H, basis=None):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis)
-        self.G, self.k_T = weiner_op(((N + M_sq.conjugate() + 1)*c_op -
-                                      (N + M_sq)*c_op.conj().T)/
-                                     sqrt(2*(M_sq.real + N) + 1),
-                                     self.basis[:-1])
+        self.G, self.k_T = sb.weiner_op(((N + M_sq.conjugate() + 1)*c_op -
+                                         (N + M_sq)*c_op.conj().T)/
+                                        np.sqrt(2*(M_sq.real + N) + 1),
+                                        self.basis[:-1])
 
 class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
     r'''Template class for integrators of the Gaussian homodyne stochastic
@@ -345,8 +345,8 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
-        vec_soln = milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
-                            times, U1s)
+        vec_soln = sde.milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
+                                times, U1s)
         return Solution(vec_soln, self.basis)
 
 class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
@@ -362,8 +362,8 @@ class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
-        vec_soln = faulty_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
-                                   rho_0_vec, times, U1s)
+        vec_soln = sde.faulty_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
+                                       rho_0_vec, times, U1s)
         return Solution(vec_soln, self.basis)
 
 class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
@@ -443,10 +443,10 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         if U2s is None:
             U2s = np.random.randn(len(times) -1)
 
-        vec_soln = time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
-                                       self.b_dx_a_fn, self.a_dx_b_fn,
-                                       self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
-                                       self.b_b_dx_dx_b_fn,
-                                       self.b_b_dx_dx_a_fn,
-                                       rho_0_vec, times, U1s, U2s)
+        vec_soln = sde.time_ind_taylor_1_5(self.a_fn, self.b_fn, self.b_dx_b_fn,
+                                           self.b_dx_a_fn, self.a_dx_b_fn,
+                                           self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
+                                           self.b_b_dx_dx_b_fn,
+                                           self.b_b_dx_dx_a_fn,
+                                           rho_0_vec, times, U1s, U2s)
         return Solution(vec_soln, self.basis)

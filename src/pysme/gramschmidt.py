@@ -1,7 +1,6 @@
 import numpy as np
 from itertools import product
 import pysme.gellmann as gm
-from numpy import sqrt
 
 def orthonormalize(A):
     """Return an orthonormal basis where A has support only on the first three
@@ -16,21 +15,21 @@ def orthonormalize(A):
     ordering = list(product(range(1, d + 1), range(1, d + 1)))
     hermitian = (A + A.conj().T)/2
     antiherm = (A - A.conj().T)/2.j
-    hermitian_comps = [ np.trace(np.dot(hermitian, G[j - 1][k - 1]))/sqrt(2) if
-        j != d or k!= d else
-        np.trace(np.dot(hermitian, G[j - 1][k - 1]))/sqrt(d) for j, k in
-        ordering ]
-    antiherm_comps = [ np.trace(np.dot(antiherm, G[j - 1][k - 1]))/sqrt(2) if
-        j != d or k!= d else
-        np.trace(np.dot(antiherm, G[j - 1][k - 1]))/sqrt(d) for j, k in
-        ordering ]
+    hermitian_comps = [np.trace(np.dot(hermitian, G[j - 1][k - 1]))/np.sqrt(2)
+                       if j != d or k!= d else
+                       np.trace(np.dot(hermitian, G[j - 1][k - 1]))/np.sqrt(d)
+                       for j, k in ordering]
+    antiherm_comps = [np.trace(np.dot(antiherm, G[j - 1][k - 1]))/np.sqrt(2)
+                      if j != d or k!= d else
+                      np.trace(np.dot(antiherm, G[j - 1][k - 1]))/np.sqrt(d)
+                      for j, k in ordering]
 
     # Identify the Gell-Mann matrices that have the most support on the
     # Hermitian and anti-Hermitian parts of A (other than identity) so that they
     # can be discarded prior to Gram-Schmidt orthogonalization.
-    max_comps = [ max(abs(herm_comp), abs(anti_comp)) if j != d or k != d else 0
-        for herm_comp, anti_comp, (j, k) in zip(hermitian_comps, antiherm_comps,
-        ordering) ]
+    max_comps = [max(abs(herm_comp), abs(anti_comp)) if j != d or k != d else 0
+                 for herm_comp, anti_comp, (j, k)
+                 in zip(hermitian_comps, antiherm_comps, ordering)]
 
     # Ensure the identity is the first element in this list.
     ordered_max_comps = [list(enumerate(max_comps))[-1]] + \
@@ -42,16 +41,16 @@ def orthonormalize(A):
         range(d**2) if not idx in discarded_indices ]
 
     vector_set = np.array([other_vectors[-1], hermitian_comps, antiherm_comps] +
-        other_vectors[0:-1]).T.real
+                          other_vectors[0:-1]).T.real
 
     basis, R = np.linalg.qr(vector_set)
-    basis = np.dot(basis, np.diag([ 1 if elem >= 0 else -1 for elem in
-      np.diag(R) ]))
+    basis = np.dot(basis, np.diag([1 if elem >= 0 else -1
+                                   for elem in np.diag(R)]))
     basis = basis.T
 
-    G_new = [ sum([ G[j - 1][k - 1]*coeff/sqrt(2) if j != d or k!= d else
-        G[j - 1][k - 1]*coeff/sqrt(d) for coeff, (j, k) in
-        zip(vect, ordering) ]) for vect in basis ]
+    G_new = [sum([G[j-1][k-1]*coeff/np.sqrt(2) if j != d or k!= d
+                  else G[j-1][k-1]*coeff/np.sqrt(d) for coeff, (j, k)
+                  in zip(vect, ordering)]) for vect in basis]
 
     A_coeffs = [
         np.trace(np.dot(G_new[0], A)),
