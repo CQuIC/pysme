@@ -98,14 +98,14 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
 
 def b_b_dx_dx_b(G, k_T, k_T_G, rho):
     r'''Function to return the
-    :math:`b^\nu b^\sigma\partial_nu\partial_\sigma b^\mu\hat{e}_\mu` term for
+    :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma b^\mu\hat{e}_\mu` term for
     stochastic integration.
 
     :param G:           :math:`G`.
     :param k_T:         :math:`\vec{k}^T`.
     :param k_T_G:       :math:`\vec{k}^TG`.
     :param rho:         :math:`\rho`.
-    :returns:           :math:`b^\nu b^\sigma\partial_nu\partial_\sigma
+    :returns:           :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
                         b^\mu\hat{e}_\mu`
 
     '''
@@ -115,11 +115,11 @@ def b_b_dx_dx_b(G, k_T, k_T_G, rho):
 
 class Solution:
     r'''Integrated solution to an ordinary or stochastic differential
-    equation. Currently just packages the vectorized solution with the basis
-    it is vectorized with respect to, but eventually will include functions to
-    conveniently calculate operator expectation values and other things one
-    might care about without wanting to worry about the particular
-    representation chosen for numerical integration.
+    equation. Packages the vectorized solution with the basis
+    it is vectorized with respect to along with providing convenient functions
+    for returning properties of the solution a user might care about (such as
+    expectation value of an observable) without requiring the user to know
+    anything about the particular representation used for numerical integration.
 
     '''
     def __init__(self, vec_soln, basis):
