@@ -341,7 +341,7 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
 
         '''
         rho_0_vec = np.array([[comp.real]
-                              for comp in vectorize(rho_0, self.basis)])
+                              for comp in sb.vectorize(rho_0, self.basis)])
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
@@ -437,7 +437,7 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
 
         '''
         rho_0_vec = np.array([[comp.real]
-                              for comp in vectorize(rho_0, self.basis)])
+                              for comp in sb.vectorize(rho_0, self.basis)])
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
         if U2s is None:
