@@ -131,9 +131,8 @@ class Solution:
         calculated times.
 
         '''
-        dual = np.array([comp.real
-                         for comp in sb.dualize(observable, self.basis)])
-        return [np.dot(dual, state)[0] for state in self.vec_soln]
+        dual = sb.dualize(observable, self.basis).real
+        return np.dot(self.vec_soln, dual)
 
 class GaussIntegrator:
     r'''Template class with most basic constructor shared by all integrators
@@ -205,7 +204,7 @@ class UncondGaussIntegrator(GaussIntegrator):
         :rtype:         list(numpy.array)
 
         '''
-        rho_0_vec = [comp.real for comp in sb.vectorize(rho_0, self.basis)]
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return Solution(vec_soln, self.basis)
 
@@ -340,8 +339,7 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         :rtype:         list(numpy.array)
 
         '''
-        rho_0_vec = np.array([[comp.real]
-                              for comp in sb.vectorize(rho_0, self.basis)])
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
@@ -357,8 +355,7 @@ class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
     '''
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
-        rho_0_vec = np.array([[comp.real]
-                              for comp in vectorize(rho_0, self.basis)])
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
@@ -436,8 +433,7 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         :rtype:         list(numpy.array)
 
         '''
-        rho_0_vec = np.array([[comp.real]
-                              for comp in sb.vectorize(rho_0, self.basis)])
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
         if U2s is None:

@@ -38,15 +38,15 @@ def vectorize(operator, basis):
     """Vectorize an operator in a particular operator basis.
 
     :param operator:    The operator to vectorize
-    :type operator:     list(numpy.array)
+    :type operator:     numpy.array
     :param basis:       The basis to vectorize the operator in
     :type basis:        list(numpy.array)
     :returns:           The vector components
-    :rtype:             list(complex)
+    :rtype:             numpy.array
 
     """
-    return [np.trace(np.dot(basis_el.conj().T, operator))/
-            norm_squared(basis_el) for basis_el in basis]
+    return np.array([np.trace(np.dot(basis_el.conj().T, operator))/
+                     norm_squared(basis_el) for basis_el in basis])
 
 def dualize(operator, basis):
     r'''Take an operator to its dual vectorized form in a particular operator
@@ -62,14 +62,15 @@ def dualize(operator, basis):
     representation).
 
     :param operator:    The operator to vectorize
-    :type operator:     list(numpy.array)
+    :type operator:     numpy.array
     :param basis:       The basis to vectorize the operator in
     :type basis:        list(numpy.array)
     :returns:           The vector components
-    :rtype:             list(complex)
+    :rtype:             numpy.array
 
     '''
-    return [np.trace(np.dot(basis_el, operator.conj().T)) for basis_el in basis]
+    return np.array([np.trace(np.dot(basis_el, operator.conj().T))
+                     for basis_el in basis])
 
 def op_calc_setup(coupling_op, basis):
     """Handle the repeated tasks performed every time a superoperator matrix is

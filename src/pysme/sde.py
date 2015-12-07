@@ -50,7 +50,7 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     :return:                Array containing the value of X for each desired
                             time in t, with the initial value `X0` in the first
                             row.
-    :rtype:                 numpy.array, shape=(len(t), len(X0))
+    :rtype:                 numpy.array, shape=(len(ts), len(X0))
 
     """
 
@@ -59,11 +59,11 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     sqrtdts = np.sqrt(dts)
     dWs = np.product(np.array([sqrtdts, Us]), axis=0)
 
-    X = [np.array(X0)]
+    X = np.array([X0])
 
     for t, dt, dW in zip(ts[:-1], dts, dWs):
-        X.append(X[-1] + drift(X[-1], t)*dt + diffusion(X[-1], t)*dW +
-                 b_dx_b(X[-1], t)*(dW**2 - dt)/2)
+        X = np.vstack((X, X[-1] + drift(X[-1], t)*dt + diffusion(X[-1], t)*dW +
+                      b_dx_b(X[-1], t)*(dW**2 - dt)/2))
 
     return X
 
