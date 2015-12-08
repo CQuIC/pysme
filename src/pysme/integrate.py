@@ -134,7 +134,20 @@ class Solution:
         dual = sb.dualize(observable, self.basis).real
         return np.dot(self.vec_soln, dual)
 
+    def get_purities(self):
+        r'''Return the purity :math:`\operatorname{Tr}[\rho^2]` at each
+        calculated time.
+
+        '''
+        basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
+                               for op in self.basis])
+        return np.dot(self.vec_soln**2, basis_dual)
+
     def get_density_matrices(self):
+        r'''Return the density matrix at each calculated time as a list of numpy
+        arrays.
+
+        '''
         return [sum([comp*op for comp, op in zip(state, self.basis)])
                 for state in self.vec_soln]
 
