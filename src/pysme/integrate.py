@@ -134,6 +134,10 @@ class Solution:
         dual = sb.dualize(observable, self.basis).real
         return np.dot(self.vec_soln, dual)
 
+    def get_density_matrices(self):
+        return [sum([comp*op for comp, op in zip(state, self.basis)])
+                for state in self.vec_soln]
+
 class GaussIntegrator:
     r'''Template class with most basic constructor shared by all integrators
     of Gaussian ordinary and stochastic master equations.
