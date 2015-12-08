@@ -255,3 +255,34 @@ def test_convergence():
                            U2s_arr)
     check_convergence_rate(1.5, taylor_1_5_integrator, rho_0, times, U1s_arr,
                            U2s_arr)
+
+def check_density_matrices(solution):
+    density_matrices = solution.get_density_matrices()
+    non_herm = [rho - rho.conj().T for rho in density_matrices]
+    assert_almost_equal(max([np.trace(np.dot(A.conj().T, A)).real
+                             for A in non_herm]), 0, 7)
+
+def check_purities(solution):
+    density_matrices = solution.get_density_matrices()
+    calc_purities = [np.trace(np.dot(rho.conj().T, rho)).real
+                     for rho in density_matrices]
+    returned_purities = solution.get_purities()
+    assert_almost_equal(np.max(np.abs(calc_purities - returned_purities)), 0, 7)
+
+def test_solution_functions():
+    r'''Check to see if convenience functions provided by the Solution object
+    are behaving correctly.
+
+    '''
+    X = np.array([[0. + 0.j, 1. + 0.j], [1. + 0.j, 0. + 0.j]])
+    Y = np.array([[0. + 0.j, 0. - 1.j], [0. + 1.j, 0. + 0.j]])
+    Z = np.array([[1. + 0.j, 0. + 0.j], [0. + 0.j, -1 + 0.j]])
+    Id = np.array([[1. + 0.j, 0. + 0.j], [0. + 0.j, 1. + 0.j]])
+    L = (X - 1.j*Y)/2
+    rho_0 = (Id + Z)/2
+    times = np.linspace(0, 1, 65)
+
+    milstein_integrator = integrate.MilsteinHomodyneIntegrator(L, 0, 0, 0)
+    solution = milstein_integrator.integrate(rho_0, times)
+    check_density_matrices(solution)
+    check_purities(solution)
