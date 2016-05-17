@@ -32,7 +32,8 @@ def norm_squared(operator):
 
     """
 
-    return abs(np.trace(np.dot(operator.conj().T, operator)))
+    return abs(np.tensordot(operator.conj().T, operator,
+               axes=[[1, 0], [0, 1]]))
 
 def vectorize(operator, basis):
     """Vectorize an operator in a particular operator basis.
@@ -45,7 +46,8 @@ def vectorize(operator, basis):
     :rtype:             numpy.array
 
     """
-    return np.array([np.trace(np.dot(basis_el.conj().T, operator))/
+    return np.array([np.tensordot(basis_el.conj().T, operator,
+                                  axes=[[1, 0], [0, 1]]) /
                      norm_squared(basis_el) for basis_el in basis])
 
 def dualize(operator, basis):
@@ -69,7 +71,8 @@ def dualize(operator, basis):
     :rtype:             numpy.array
 
     '''
-    return np.array([np.trace(np.dot(basis_el, operator.conj().T))
+    return np.array([np.tensordot(basis_el, operator.conj().T,
+                                  axes=[[1, 0], [0, 1]])
                      for basis_el in basis])
 
 def op_calc_setup(coupling_op, basis):
@@ -133,14 +136,15 @@ def diffusion_op(coupling_op, basis):
         # Square norm of basis element corresponding to current row
         sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            symm_addends = [abs(c)**2*np.trace(np.dot(basis[row], np.dot(op,
+            symm_addends = [abs(c)**2*np.tensordot(basis[row], np.dot(op,
                 np.dot(basis[col], op)) - 0.5*(np.dot(op, np.dot(op,
-                basis[col])) + np.dot(basis[col], np.dot(op, op))))) for c, op
-                in c_op_pairs]
-            non_symm_addends = [c1*c2.conjugate()*np.trace(np.dot(basis[row],
+                basis[col])) + np.dot(basis[col], np.dot(op, op))),
+                axes=[[1, 0], [0, 1]]) for c, op in c_op_pairs]
+            non_symm_addends = [c1*c2.conjugate()*np.tensordot(basis[row],
                 np.dot(op1, np.dot(basis[col], op2)) - 0.5*(np.dot(op2,
                 np.dot(op1, basis[col])) + np.dot(basis[col],
-                np.dot(op2, op1))))) for c1, op1, part_c_op_pair in
+                np.dot(op2, op1))), axes=[[1, 0], [0, 1]])
+                for c1, op1, part_c_op_pair in
                 c_op_part_triplets for c2, op2 in part_c_op_pair]
             D_matrix[row, col] = (sum(symm_addends).real + 
                                   2*sum(non_symm_addends).real)/sqnorm
@@ -196,12 +200,13 @@ def double_comm_op(coupling_op, M_sq, basis):
                 recur_dot([basis[row], op, op, basis[col]]) -
                 recur_dot([basis[row], op, basis[col], op]))).real for c, op
                 in c_op_pairs]
-            non_symm_addends = [(M_sq.conjugate()*c1*c2).real*(np.trace(
-                np.dot(basis[row], recur_dot([op2, op1, basis[col]]) +
+            non_symm_addends = [(M_sq.conjugate()*c1*c2).real*(
+                np.tensordot(basis[row], recur_dot([op2, op1, basis[col]]) +
                        recur_dot([basis[col], op2, op1]) -
-                       2*recur_dot([op2, basis[col], op1]))).real) for c1, op1,
-                part_c_op_pair in c_op_part_triplets for c2, op2 in
-                part_c_op_pair]
+                       2*recur_dot([op2, basis[col], op1]),
+                       axes=[[1, 0], [0, 1]]).real)
+                for c1, op1, part_c_op_pair in c_op_part_triplets
+                for c2, op2 in part_c_op_pair]
             E_matrix[row, col] = 2*(sum(symm_addends) +
                                     sum(non_symm_addends))/sqnorm
 
@@ -242,9 +247,9 @@ def hamiltonian_op(hamiltonian, basis):
         # Square norm of basis element corresponding to current row
         sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            addends = [h.real*(np.trace(np.dot(basis[row],
-                np.dot(op, basis[col]) - np.dot(basis[col], op))).imag) for h,
-                op in h_op_pairs]
+            addends = [h.real*(np.tensordot(basis[row],
+                np.dot(op, basis[col]) - np.dot(basis[col], op),
+                axes=[[1, 0], [0, 1]]).imag) for h, op in h_op_pairs]
             F_matrix[row, col] = sum(addends)/sqnorm
 
     return F_matrix
@@ -287,8 +292,8 @@ def weiner_op(coupling_op, basis):
         sqnorm = norm_squared(basis[row])
         k_vec[row] = -2*C_vector[row].real*norm_squared(basis[row])
         for col in range(dim):
-            G_addends = [(c*np.trace(recur_dot([basis[row], op,
-                                                 basis[col]]))).real for c,
-                          op in c_op_pairs]
+            G_addends = [(c*np.tensordot(basis[row],
+                                         np.dot(op, basis[col]))).real
+                         for c, op in c_op_pairs]
             G_matrix[row, col] = 2*sum(G_addends)/sqnorm
     return G_matrix, k_vec
