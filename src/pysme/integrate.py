@@ -252,6 +252,50 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
                                         np.sqrt(2*(M_sq.real + N) + 1),
                                         self.basis[:-1])
 
+    def integrate(self, rho_0, times, U1s=None, U2s=None):
+        raise NotImplementedError()
+
+    def gen_meas_record(self, rho_0, times, U1s=None):
+        r'''Integrate for a sequence of times with a given initial condition
+        (and optionally specified white noise), returning a measurement record
+        along with the trajectory.
+
+        The incremental measurement outcomes making up the measurement record
+        are related to the white noise increments and instantaneous state in the
+        following way:
+
+        .. math::
+
+           dM_t=dW_t-\operatorname{tr}[(c+c^\dagger)\rho_t]
+
+        :param rho_0:   The initial state of the system
+        :type rho_0:    numpy.array
+        :param times:   A sequence of time points for which to solve for rho
+        :type times:    list(real)
+        :param U1s:     Samples from a standard-normal distribution used to
+                        construct Wiener increments :math:`\Delta W` for each
+                        time interval. Multiple rows may be included for
+                        independent trajectories.
+        :type U1s:      numpy.array(len(times) - 1)
+        :returns:       The components of the vecorized :math:`\rho` for all
+                        specified times and an array of incremental measurement
+                        outcomes
+        :rtype:         (list(numpy.array), numpy.array)
+
+        '''
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        soln = self.integrate(rho_0, times, U1s)
+
+        dts = times[1:] - times[:-1]
+        dWs = np.sqrt(dts) * U1s
+        tr_c_c_rs = np.array([-np.dot(self.k_T, rho_vec)
+                              for rho_vec in soln.vec_soln[:-1]])
+        dMs = dWs + tr_c_c_rs * dts
+
+        return soln, dMs
+
 class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
     r'''Template class for integrators of the Gaussian homodyne stochastic
     master equation of strong order >= 1.
@@ -306,6 +350,84 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         self.k_T_G2 = np.dot(self.k_T, self.G2)
         self.k_T_Q = np.dot(self.k_T, self.Q)
 
+class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
+    r'''Integrator for the conditional Gaussian master equation that uses Euler
+    integration.
+
+    :param c_op:    The coupling operator
+    :type c_op:     numpy.array
+    :param M_sq:    The squeezing parameter
+    :type M_sq:     complex
+    :param N:       The thermal parameter
+    :type N:        positive real
+    :param H:       The plant Hamiltonian
+    :type H:        numpy.array
+    :param basis:   The Hermitian basis to vectorize the operators in terms of
+                    (with the component proportional to the identity in last
+                    place) If no basis is provided the generalized Gell-Mann
+                    basis will be used.
+    :type basis:    list(numpy.array)
+
+    '''
+
+    def a_fn(self, rho, t):
+        return np.dot(self.Q, rho)
+
+    def b_fn(self, rho, t):
+        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
+
+    def dW_fn(self, dM, dt, rho, t):
+        return dM + np.dot(self.k_T, rho) * dt
+
+    def integrate(self, rho_0, times, U1s=None, U2s=None):
+        r'''Integrate for a sequence of times with a given initial condition
+        (and optionally specified white noise).
+
+        :param rho_0:   The initial state of the system
+        :type rho_0:    numpy.array
+        :param times:   A sequence of time points for which to solve for rho
+        :type times:    list(real)
+        :param U1s:     Samples from a standard-normal distribution used to
+                        construct Wiener increments :math:`\Delta W` for each
+                        time interval. Multiple rows may be included for
+                        independent trajectories.
+        :type U1s:      numpy.array(len(times) - 1)
+        :param U2s:     Unused, included to make the argument list uniform with
+                        higher-order integrators.
+        :type U2s:      numpy.array(len(times) - 1)
+        :returns:       The components of the vecorized :math:`\rho` for all
+                        specified times
+        :rtype:         list(numpy.array)
+
+        '''
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
+        return Solution(vec_soln, self.basis)
+
+    def integrate_measurements(self, rho_0, times, dMs):
+        r'''Integrate system evolution conditioned on a measurement record for a
+        sequence of times with a given initial condition.
+
+        :param rho_0:   The initial state of the system
+        :type rho_0:    numpy.array
+        :param times:   A sequence of time points for which to solve for rho
+        :type times:    list(real)
+        :param dMs:     Incremental measurement outcomes used to drive the SDE.
+        :type dMs:      numpy.array(len(times) - 1)
+        :returns:       The components of the vecorized :math:`\rho` for all
+                        specified times
+        :rtype:         list(numpy.array)
+
+        '''
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
+
+        vec_soln = sde.meas_euler(self.a_fn, self.b_fn, self.dW_fn, rho_0_vec,
+                                  times, dMs)
+        return Solution(vec_soln, self.basis)
+
 class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     r'''Integrator for the conditional Gaussian master equation that uses
     Milstein integration.
@@ -335,6 +457,9 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     def b_dx_b_fn(self, rho, t):
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
 
+    def dW_fn(self, dM, dt, rho, t):
+        return dM + np.dot(self.k_T, rho) * dt
+
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         r'''Integrate for a sequence of times with a given initial condition
         (and optionally specified white noise).
@@ -362,6 +487,27 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
 
         vec_soln = sde.milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
                                 times, U1s)
+        return Solution(vec_soln, self.basis)
+
+    def integrate_measurements(self, rho_0, times, dMs):
+        r'''Integrate system evolution conditioned on a measurement record for a
+        sequence of times with a given initial condition.
+
+        :param rho_0:   The initial state of the system
+        :type rho_0:    numpy.array
+        :param times:   A sequence of time points for which to solve for rho
+        :type times:    list(real)
+        :param dMs:     Incremental measurement outcomes used to drive the SDE.
+        :type dMs:      numpy.array(len(times) - 1)
+        :returns:       The components of the vecorized :math:`\rho` for all
+                        specified times
+        :rtype:         list(numpy.array)
+
+        '''
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
+
+        vec_soln = sde.meas_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
+                                     self.dW_fn, rho_0_vec, times, dMs)
         return Solution(vec_soln, self.basis)
 
 class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
