@@ -282,7 +282,8 @@ def test_solution_functions():
     rho_0 = (Id + Z)/2
     times = np.linspace(0, 1, 65)
 
-    milstein_integrator = integrate.MilsteinHomodyneIntegrator(L, 0, 0, 0)
+    milstein_integrator = integrate.MilsteinHomodyneIntegrator(L, 0, 0,
+            np.zeros(L.shape))
     solution = milstein_integrator.integrate(rho_0, times)
     check_density_matrices(solution)
     check_purities(solution)
