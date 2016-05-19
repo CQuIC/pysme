@@ -90,13 +90,16 @@ def basis(n):
     return [gm.gellmann(j, k, n) for j in range(1, n + 1) for k in
             range(1, n + 1)]
 
-def check_trace_preservation(supop_builder):
+def check_trace_preservation(supop_builder, supop_setup):
     """Make sure that the identity component of the density operator doesn't
     evolve.
 
-    :param supop_builder:   Function that takes a coupling op and basis (minus
-                            identity) as arguments and returns the appropriate
-                            matrix
+    :param supop_builder:   Function that constructs a superoperator matrix
+                            given the output from supop_setup.
+    :param supop_setup:     Function that takes a coupling op and basis (minus
+                            identity) as arguments and returns the arguments
+                            needed for supop_builder to construct the
+                            appropriate matrix.
     """
 
     for dim in range(2, 3 + 1):
@@ -104,17 +107,19 @@ def check_trace_preservation(supop_builder):
             for col in range(dim):
                 # Couple using all the different Gell-Mann matrices
                 c_op = gm.gellmann(row + 1, col + 1, dim)
-                D_matrix = supop_builder(c_op, basis(dim)[:-1])
+                kwargs = supop_setup(c_op, basis(dim)[:-1])
+                D_matrix = supop_builder(**kwargs)
                 for entry in D_matrix[-1]:
-                    assert_equal(0, entry)
+                    assert_almost_equal(0, entry, 7)
 
     for dim in range(2, 3 + 1):
         np.random.seed(dim)
         # Couple using random matrices
         rand_c_op = np.random.randn(dim, dim) + 1.j*np.random.randn(dim, dim)
-        D_matrix = sb.diffusion_op(rand_c_op, basis(dim)[:-1])
+        kwargs = supop_setup(rand_c_op, basis(dim)[:-1])
+        D_matrix = sb.diffusion_op(**kwargs)
         for entry in D_matrix[-1]:
-            assert_equal(0, entry)
+            assert_almost_equal(0, entry, 7)
 
 def check_vectorize(operators, basis):
     vectorizations = [sb.vectorize(operator, basis) for operator in operators]
@@ -126,10 +131,15 @@ def check_vectorize(operators, basis):
         assert_almost_equal(np.trace(np.dot(diff.conj().T, diff)), 0, 7)
 
 def test_system_builder():
-    check_trace_preservation(sb.diffusion_op)
+    check_trace_preservation(sb.diffusion_op, lambda c_op, partial_basis:
+                             sb.op_calc_setup(c_op, 0, 0, np.zeros(c_op.shape),
+                                              partial_basis))
     squeezing_params = [1, 1.j, -1, -1.j]
     for M in squeezing_params:
-        check_trace_preservation(lambda c, b: sb.double_comm_op(c, M, b))
+        check_trace_preservation(sb.double_comm_op, lambda c_op, partial_basis:
+                                 sb.op_calc_setup(c_op, M, 0,
+                                                  np.zeros(c_op.shape),
+                                                  partial_basis))
     c2_operators = [np.array([[0, 1],
                               [0, 0]]),
                     np.array([[0, 0],

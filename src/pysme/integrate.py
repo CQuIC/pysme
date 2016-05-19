@@ -176,10 +176,7 @@ class GaussIntegrator:
             self.basis = gm.get_basis(d)
         else:
             self.basis = basis
-        self.Q = (N + 1)*sb.diffusion_op(c_op, self.basis[:-1]) + \
-                 N*sb.diffusion_op(c_op.conj().T, self.basis[:-1]) + \
-                 sb.double_comm_op(c_op, M_sq, self.basis[:-1]) + \
-                 sb.hamiltonian_op(H, self.basis[:-1])
+        self.Q = sb.construct_Q(c_op, M_sq, N, H, self.basis[:-1])
 
     def integrate(self, rho_0, times):
         raise NotImplementedError()
@@ -247,10 +244,7 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     def __init__(self, c_op, M_sq, N, H, basis=None):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis)
-        self.G, self.k_T = sb.weiner_op(((N + M_sq.conjugate() + 1)*c_op -
-                                         (N + M_sq)*c_op.conj().T)/
-                                        np.sqrt(2*(M_sq.real + N) + 1),
-                                        self.basis[:-1])
+        self.G, self.k_T = sb.construct_G_k_T(c_op, M_sq, N, H, self.basis[:-1])
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         raise NotImplementedError()

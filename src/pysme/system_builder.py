@@ -7,7 +7,7 @@
 """
 
 import numpy as np
-from itertools import product
+import itertools as it
 
 def recur_dot(mats):
     """Perform numpy.dot on a list in a right-associative manner.
@@ -75,7 +75,7 @@ def dualize(operator, basis):
                                   axes=[[1, 0], [0, 1]])
                      for basis_el in basis])
 
-def op_calc_setup(coupling_op, basis):
+def op_calc_setup(coupling_op, M_sq, N, H, partial_basis):
     """Handle the repeated tasks performed every time a superoperator matrix is
     computed.
 
@@ -83,18 +83,54 @@ def op_calc_setup(coupling_op, basis):
 
     # Add the identity to the end of the basis to complete it (important for
     # some tests for the identity to be the last basis element).
-    basis.append(np.eye(len(basis[0][0])))
+    basis = partial_basis + [np.eye(*partial_basis[0].shape)]
 
     dim = len(basis)
-    supop_matrix = np.zeros((dim, dim)) # The matrix to return
 
     # Vectorization of the coupling operator
     C_vector = vectorize(coupling_op, basis)
-    c_op_pairs = list(zip(C_vector, basis))
+    H_vector = vectorize(H, basis)
 
-    return dim, supop_matrix, C_vector, c_op_pairs
+    double_prods = {(i, j): np.dot(basis[i], basis[j])
+                    for i, j in it.product(range(dim), repeat=2)}
 
-def diffusion_op(coupling_op, basis):
+    triple_prods = {(i, j, k): np.dot(basis[i], double_prods[j, k]) -
+                    0.5 * np.dot(basis[k], double_prods[i, j]) -
+                    0.5 * np.dot(basis[j], double_prods[k, i])
+                    for j, k, i in it.product(range(dim), repeat=3)}
+
+    # Square norm of basis elements
+    basis_norms_sq = [norm_squared(basis[i]) for i in range(dim)]
+
+    return {'dim': dim, 'C_vector': C_vector, 'double_prods': double_prods,
+            'triple_prods': triple_prods, 'basis': basis, 'M_sq': M_sq, 'N': N,
+            'H_vector': H_vector, 'basis_norms_sq': basis_norms_sq}
+
+def construct_Q(coupling_op, M_sq, N, H, partial_basis):
+    common_dict = op_calc_setup(coupling_op, M_sq, N, H, partial_basis)
+    D_c = diffusion_op(**common_dict)
+    conjugate_dict = common_dict.copy()
+    conjugate_dict['C_vector'] = common_dict['C_vector'].conjugate()
+    D_c_dag = diffusion_op(**conjugate_dict)
+    E = double_comm_op(**common_dict)
+    F = hamiltonian_op(**common_dict)
+
+    Q = (N + 1) * D_c + N * D_c_dag + E + F
+
+    return Q
+
+
+def construct_G_k_T(c_op, M_sq, N, H, partial_basis):
+    common_dict = op_calc_setup((N + M_sq.conjugate() + 1) * c_op -
+                                (N + M_sq) * c_op.conj().T, M_sq, N, H,
+                                partial_basis)
+
+    G, k_T = weiner_op(**common_dict)
+
+    return G, k_T
+
+
+def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
     r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
     expression
 
@@ -123,38 +159,36 @@ def diffusion_op(coupling_op, basis):
     :rtype:             numpy.array
 
     """
-
-    dim, D_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
+    D_matrix = np.zeros((dim, dim)) # The matrix to return
 
     # TODO: Write tests to catch the inappropriate use of conjugate() without T
 
     # Construct lists of basis elements up to the current basis element for
     # doing the sum of the non-symmetric part of each element.
-    part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]
-    c_op_part_triplets = list(zip(C_vector, basis, part_c_op_pairs))
+
+    col_symm_ops = [sum([abs(C_vector[n]) ** 2 * triple_prods[n, col, n]
+                         for n in range(dim)]) for col in range(dim)]
+    col_non_symm_ops = [sum([C_vector[m] * C_vector[n].conjugate() *
+                             triple_prods[m, col, n]
+                             for m, n in it.chain(*[it.product(range(k), [k])
+                                                    for k in range(dim)])])
+                        for col in range(dim)]
+
     for row in range(dim):
-        # Square norm of basis element corresponding to current row
-        sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            symm_addends = [abs(c)**2*np.tensordot(basis[row], np.dot(op,
-                np.dot(basis[col], op)) - 0.5*(np.dot(op, np.dot(op,
-                basis[col])) + np.dot(basis[col], np.dot(op, op))),
-                axes=[[1, 0], [0, 1]]) for c, op in c_op_pairs]
-            non_symm_addends = [c1*c2.conjugate()*np.tensordot(basis[row],
-                np.dot(op1, np.dot(basis[col], op2)) - 0.5*(np.dot(op2,
-                np.dot(op1, basis[col])) + np.dot(basis[col],
-                np.dot(op2, op1))), axes=[[1, 0], [0, 1]])
-                for c1, op1, part_c_op_pair in
-                c_op_part_triplets for c2, op2 in part_c_op_pair]
-            D_matrix[row, col] = (sum(symm_addends).real + 
-                                  2*sum(non_symm_addends).real)/sqnorm
+            D_matrix[row, col] = (np.tensordot(basis[row],
+                                               col_symm_ops[col] +
+                                               2 * col_non_symm_ops[col],
+                                               [[1, 0], [0, 1]]).real /
+                                  basis_norms_sq[row])
 
     return D_matrix
 
 # TODO: Formulate tests to verify correctness of this evolution.
 # TODO: Fix this function to compute matrix elements as described in the
 # Vectorization page in the documentation.
-def double_comm_op(coupling_op, M_sq, basis):
+def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
+                   **kwargs):
     r"""Return a matrix :math:`E` such that when :math:`\rho` is vectorized the
     expression
 
@@ -187,32 +221,32 @@ def double_comm_op(coupling_op, M_sq, basis):
 
     """
 
-    dim, E_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
+    E_matrix = np.zeros((dim, dim)) # The matrix to return
 
-    # Construct lists of basis elements up to the current basis element for
-    # doing the sum of the non-symmetric part of each element.
-    part_c_op_pairs = [[c_op_pairs[m] for m in range(n)] for n in range(dim)]
-    c_op_part_triplets = list(zip(C_vector, basis, part_c_op_pairs))
+    col_symm_ops = [sum([(M_sq.conjugate() * C_vector[n] ** 2).real *
+                         (triple_prods[n, n, col] - triple_prods[n, col, n])
+                         for n in range(dim)]) for col in range(dim)]
+    col_non_symm_ops = [sum([(M_sq.conjugate() * C_vector[m] *
+                              C_vector[n]).real *
+                             (triple_prods[m, n, col] +
+                              triple_prods[col, m, n] -
+                              2.0 * triple_prods[m, col, n])
+                             for m, n in it.chain(*[it.product(range(k), [k])
+                                                    for k in range(dim)])])
+                        for col in range(dim)]
+
     for row in range(dim):
-        sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            symm_addends = [(M_sq.conjugate()*c*c).real*(np.trace(
-                recur_dot([basis[row], op, op, basis[col]]) -
-                recur_dot([basis[row], op, basis[col], op]))).real for c, op
-                in c_op_pairs]
-            non_symm_addends = [(M_sq.conjugate()*c1*c2).real*(
-                np.tensordot(basis[row], recur_dot([op2, op1, basis[col]]) +
-                       recur_dot([basis[col], op2, op1]) -
-                       2*recur_dot([op2, basis[col], op1]),
-                       axes=[[1, 0], [0, 1]]).real)
-                for c1, op1, part_c_op_pair in c_op_part_triplets
-                for c2, op2 in part_c_op_pair]
-            E_matrix[row, col] = 2*(sum(symm_addends) +
-                                    sum(non_symm_addends))/sqnorm
+            E_matrix[row, col] = 2 * (np.tensordot(basis[row],
+                                                   col_symm_ops[col] +
+                                                   col_non_symm_ops[col],
+                                                   [[1, 0], [0, 1]]).real /
+                                      basis_norms_sq[row])
 
     return E_matrix
 
-def hamiltonian_op(hamiltonian, basis):
+def hamiltonian_op(dim, H_vector, double_prods, basis_norms_sq, basis,
+                   **kwargs):
     r"""Return a matrix :math:`F` such that when :math:`\rho` is vectorized the
     expression
 
@@ -241,20 +275,22 @@ def hamiltonian_op(hamiltonian, basis):
 
     """
 
-    dim, F_matrix, H_vector, h_op_pairs = op_calc_setup(hamiltonian, basis)
+    F_matrix = np.zeros((dim, dim)) # The matrix to return
+
+    col_ops = [sum([H_vector[n].real * (double_prods[n, col] -
+                                        double_prods[col, n])
+               for n in range(dim)]) for col in range(dim)]
 
     for row in range(dim):
-        # Square norm of basis element corresponding to current row
-        sqnorm = norm_squared(basis[row])
         for col in range(dim):
-            addends = [h.real*(np.tensordot(basis[row],
-                np.dot(op, basis[col]) - np.dot(basis[col], op),
-                axes=[[1, 0], [0, 1]]).imag) for h, op in h_op_pairs]
-            F_matrix[row, col] = sum(addends)/sqnorm
+            F_matrix[row, col] = (np.tensordot(basis[row],
+                                               col_ops[col],
+                                               [[1, 0], [0, 1]]).imag /
+                                  basis_norms_sq[row])
 
     return F_matrix
 
-def weiner_op(coupling_op, basis):
+def weiner_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
     r"""Return a the matrix-vector pair :math:`(G,\vec{k})` such that when
     :math:`\rho` is vectorized the expression
 
@@ -285,15 +321,17 @@ def weiner_op(coupling_op, basis):
 
     """
 
-    dim, G_matrix, C_vector, c_op_pairs = op_calc_setup(coupling_op, basis)
-    k_vec = np.zeros(dim)
+    G_matrix = np.zeros((dim, dim)) # The matrix to return
+    k_vec = np.zeros(dim) # The dual vector to return
+
+    col_ops = [sum([C_vector[n] * double_prods[n, col] for n in range(dim)])
+               for col in range(dim)]
 
     for row in range(dim):
-        sqnorm = norm_squared(basis[row])
-        k_vec[row] = -2*C_vector[row].real*norm_squared(basis[row])
+        k_vec[row] = -2.0 * C_vector[row].real * basis_norms_sq[row]
         for col in range(dim):
-            G_addends = [(c*np.tensordot(basis[row],
-                                         np.dot(op, basis[col]))).real
-                         for c, op in c_op_pairs]
-            G_matrix[row, col] = 2*sum(G_addends)/sqnorm
+            G_matrix[row, col] = 2 * (np.tensordot(basis[row], col_ops[col],
+                                      [[1, 0], [0, 1]]).real /
+                                      basis_norms_sq[row])
+
     return G_matrix, k_vec
