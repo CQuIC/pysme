@@ -287,3 +287,29 @@ def test_solution_functions():
     solution = milstein_integrator.integrate(rho_0, times)
     check_density_matrices(solution)
     check_purities(solution)
+
+def test_against_matrix_implementation():
+    r'''Compare an Euler trajectory computed naively using matrices to the
+    Euler trajectory computed by our implementation for a particular
+    realization of noise.
+
+    '''
+    c_loaded = np.load('matrix_euler_test_0/coupling_op.npy')
+    MN_arr = np.load('matrix_euler_test_0/M_N.npy')
+    M_loaded = MN_arr[0]
+    N_loaded = MN_arr[1]
+    H_loaded = np.load('matrix_euler_test_0/H.npy')
+    times_loaded = np.load('matrix_euler_test_0/times.npy')
+    U1s_loaded = np.load('matrix_euler_test_0/U1s.npy')
+    rho0_loaded = np.load('matrix_euler_test_0/rho_0.npy')
+    rhos_loaded = np.load('matrix_euler_test_0/rhos.npy')
+
+    test_integrator = integrate.EulerHomodyneIntegrator(c_loaded, M_loaded,
+                                                        N_loaded, H_loaded)
+    test_soln = test_integrator.integrate(rho0_loaded, times_loaded,
+                                          U1s_loaded)
+    test_rhos = test_soln.get_density_matrices()
+    test_errors = test_rhos - rhos_loaded
+    error_norms = [sb.norm_squared(test_errors[j])
+                   for j in range(test_errors.shape[0])]
+    assert_almost_equal(max(error_norms), 0.0, 7)
