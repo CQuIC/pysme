@@ -170,13 +170,17 @@ class GaussIntegrator:
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis=None):
+    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None):
         if basis is None:
             d = c_op.shape[0]
             self.basis = gm.get_basis(d)
         else:
             self.basis = basis
-        self.Q = sb.construct_Q(c_op, M_sq, N, H, self.basis[:-1])
+
+        if drift_rep is None:
+            self.Q = sb.construct_Q(c_op, M_sq, N, H, self.basis[:-1])
+        else:
+            self.Q = drift_rep
 
     def a_fn(self, rho, t):
         return np.dot(self.Q, rho)
@@ -241,10 +245,17 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis=None):
+    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
+                 diffusion_reps=None):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
-                                                            basis)
-        self.G, self.k_T = sb.construct_G_k_T(c_op, M_sq, N, H, self.basis[:-1])
+                                                            basis, drift_rep)
+
+        if diffusion_reps is None:
+            self.G, self.k_T = sb.construct_G_k_T(c_op, M_sq, N, H,
+                                                  self.basis[:-1])
+        else:
+            self.G = diffusion_reps['G']
+            self.k_T = diffusion_reps['k_T']
 
     def b_fn(self, rho, t):
         return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
@@ -315,9 +326,11 @@ class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis=None):
+    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
+                 diffusion_reps=None):
         super(Strong_1_0_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
-                                                            basis)
+                                                            basis, drift_rep,
+                                                            diffusion_reps)
         self.k_T_G = np.dot(self.k_T, self.G)
         self.G2 = np.dot(self.G, self.G)
 
@@ -340,9 +353,10 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis=None):
+    def __init__(self, c_op, M_sq, N, H, basis=None, Q=None, G=None, k_T=None):
         super(Strong_1_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
-                                                            basis)
+                                                            basis, drift_rep,
+                                                            diffusion_reps)
         self.G3 = np.dot(self.G2, self.G)
         self.Q2 = np.dot(self.Q, self.Q)
         self.QG = np.dot(self.Q, self.G)
