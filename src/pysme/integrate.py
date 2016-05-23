@@ -178,6 +178,9 @@ class GaussIntegrator:
             self.basis = basis
         self.Q = sb.construct_Q(c_op, M_sq, N, H, self.basis[:-1])
 
+    def a_fn(self, rho, t):
+        return np.dot(self.Q, rho)
+
     def integrate(self, rho_0, times):
         raise NotImplementedError()
 
@@ -199,9 +202,6 @@ class UncondGaussIntegrator(GaussIntegrator):
     :type basis:    list(numpy.array)
 
     '''
-    def a_fn(self, rho, t):
-        return np.dot(self.Q, rho)
-
     def Dfun(self, rho, t):
         return self.Q
 
@@ -245,6 +245,12 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis)
         self.G, self.k_T = sb.construct_G_k_T(c_op, M_sq, N, H, self.basis[:-1])
+
+    def b_fn(self, rho, t):
+        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
+
+    def dW_fn(self, dM, dt, rho, t):
+        return dM + np.dot(self.k_T, rho) * dt
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         raise NotImplementedError()
@@ -364,15 +370,6 @@ class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
 
     '''
 
-    def a_fn(self, rho, t):
-        return np.dot(self.Q, rho)
-
-    def b_fn(self, rho, t):
-        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
-
-    def dW_fn(self, dM, dt, rho, t):
-        return dM + np.dot(self.k_T, rho) * dt
-
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         r'''Integrate for a sequence of times with a given initial condition
         (and optionally specified white noise).
@@ -442,17 +439,8 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
 
     '''
 
-    def a_fn(self, rho, t):
-        return np.dot(self.Q, rho)
-
-    def b_fn(self, rho, t):
-        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
-
     def b_dx_b_fn(self, rho, t):
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
-
-    def dW_fn(self, dM, dt, rho, t):
-        return dM + np.dot(self.k_T, rho) * dt
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         r'''Integrate for a sequence of times with a given initial condition
@@ -539,12 +527,6 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     :type basis:    list(numpy.array)
 
     """
-    def a_fn(self, rho):
-        return np.dot(self.Q, rho)
-
-    def b_fn(self, rho):
-        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
-
     def b_dx_b_fn(self, rho):
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
 
