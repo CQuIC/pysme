@@ -170,7 +170,7 @@ class GaussIntegrator:
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None):
+    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None, **kwargs):
         if basis is None:
             d = c_op.shape[0]
             self.basis = gm.get_basis(d)
@@ -246,7 +246,7 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
 
     '''
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
-                 diffusion_reps=None):
+                 diffusion_reps=None, **kwargs):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis, drift_rep)
 
@@ -327,7 +327,7 @@ class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
 
     '''
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
-                 diffusion_reps=None):
+                 diffusion_reps=None, **kwargs):
         super(Strong_1_0_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis, drift_rep,
                                                             diffusion_reps)
@@ -353,7 +353,8 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     :type basis:    list(numpy.array)
 
     '''
-    def __init__(self, c_op, M_sq, N, H, basis=None, Q=None, G=None, k_T=None):
+    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
+                 diffusion_reps=None, **kwargs):
         super(Strong_1_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis, drift_rep,
                                                             diffusion_reps)
@@ -541,6 +542,12 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     :type basis:    list(numpy.array)
 
     """
+    def a_fn(self, rho):
+        return np.dot(self.Q, rho)
+
+    def b_fn(self, rho):
+        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
+
     def b_dx_b_fn(self, rho):
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
 
