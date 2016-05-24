@@ -606,3 +606,14 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
                                            self.b_b_dx_dx_a_fn,
                                            rho_0_vec, times, U1s, U2s)
         return Solution(vec_soln, self.basis)
+
+class TrDecMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
+    '''Only do the linear evolution, where the decrease in trace now encodes
+    the likelihood of the particular trajectory.
+
+    '''
+    def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
+                 diffusion_reps=None, **kwargs):
+        super(TrDecMilsteinHomodyneIntegrator, self).__init__(c_op, M_sq, N, H, basis)
+        self.k_T = 0
+        self.k_T_G = np.zeros(self.G.shape)
