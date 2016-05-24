@@ -248,7 +248,8 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
                  diffusion_reps=None, **kwargs):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
-                                                            basis, drift_rep)
+                                                            basis, drift_rep,
+                                                            **kwargs)
 
         if diffusion_reps is None:
             self.G, self.k_T = sb.construct_G_k_T(c_op, M_sq, N, H,
@@ -330,7 +331,8 @@ class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
                  diffusion_reps=None, **kwargs):
         super(Strong_1_0_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis, drift_rep,
-                                                            diffusion_reps)
+                                                            diffusion_reps,
+                                                            **kwargs)
         self.k_T_G = np.dot(self.k_T, self.G)
         self.G2 = np.dot(self.G, self.G)
 
@@ -357,7 +359,8 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
                  diffusion_reps=None, **kwargs):
         super(Strong_1_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
                                                             basis, drift_rep,
-                                                            diffusion_reps)
+                                                            diffusion_reps,
+                                                            **kwargs)
         self.G3 = np.dot(self.G2, self.G)
         self.Q2 = np.dot(self.Q, self.Q)
         self.QG = np.dot(self.Q, self.G)
@@ -614,7 +617,10 @@ class TrDecMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
     '''
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
                  diffusion_reps=None, **kwargs):
-        super(TrDecMilsteinHomodyneIntegrator, self).__init__(c_op, M_sq, N, H, basis)
+        super(TrDecMilsteinHomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
+                                                              basis, drift_rep,
+                                                              diffusion_reps,
+                                                              **kwargs)
         self.k_T = 0
         self.k_T_G = np.zeros(self.G.shape)
 
