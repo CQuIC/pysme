@@ -617,3 +617,29 @@ class TrDecMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
         super(TrDecMilsteinHomodyneIntegrator, self).__init__(c_op, M_sq, N, H, basis)
         self.k_T = 0
         self.k_T_G = np.zeros(self.G.shape)
+
+class IntegratorFactory:
+    r'''A class that pre-computes some of the things in common to a family of
+    integrators one wants to construct instances of.
+
+    '''
+    def __init__(self, IntClass, precomp_data, parameter_fn):
+        '''Constructor.
+
+        :param precomp_data:    Data needed by the `IntClass` constructor common
+                                across all integrators in the family of interest
+                                in the form that can be passed to the
+                                `parameter_fn` as `precomp_data`.
+        :param parameter_fn:    Function that takes the parameters defining the
+                                instance of the family to be generated and the
+                                precomputed data and returns `**kwargs` to pass
+                                to the constructor of `IntClass`.
+
+        '''
+        self.precomp_data = precomp_data
+        self.parameter_fn = parameter_fn
+        self.IntClass = IntClass
+
+    def make_integrator(self, params):
+        constructor_kwargs = self.parameter_fn(params, self.precomp_data)
+        return self.IntClass(**constructor_kwargs)
