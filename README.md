@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.org/CQuIC-GitHub/pysme.svg?branch=master)](
-https://travis-ci.org/CQuIC-GitHub/pysme)
+[![Build Status](https://travis-ci.org/CQuIC/pysme.svg?branch=master)](
+https://travis-ci.org/CQuIC/pysme)
 [![Documentation Status](
 https://readthedocs.org/projects/pysme/badge/?version=latest)](
 http://pysme.readthedocs.org/en/latest/?badge=latest)
