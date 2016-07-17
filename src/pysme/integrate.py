@@ -12,83 +12,144 @@ import pysme.sde as sde
 import pysme.gellmann as gm
 
 def b_dx_b(G2, k_T_G, G, k_T, rho):
-    r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
+    r"""A term in Taylor integration methods.
+
+    Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
     \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for Milstein
     integration.
 
-    :param G2:          :math:`G^2`.
-    :param k_T_G:       :math:`\vec{k}^TG`.
-    :param G:           :math:`G`.
-    :param k_T:         :math:`\vec{k}^T`.
-    :param rho:         :math:`\rho`.
-    :returns:           :math:`\left(\vec{b}(\vec{\rho})\cdot
-                        \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})`.
+    Parameters
+    ----------
+    G2: numpy.array
+        :math:`G^2`.
+    k_T_G: numpy.array
+        :math:`\vec{k}^TG`.
+    G: numpy.array
+        :math:`G`.
+    k_T: numpy.array
+        :math:`\vec{k}^T`.
+    rho: numpy.array
+        :math:`\rho`.
 
-    '''
+    Returns
+    -------
+    numpy.array
+        :math:`\left(\vec{b}(\vec{\rho})\cdot
+        \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})`.
+
+    """
     k_rho_dot = np.dot(k_T, rho)
     return (np.dot(k_T_G, rho) + 2*k_rho_dot**2)*rho + \
             np.dot(G2 + 2*k_rho_dot*G, rho)
 
 def b_dx_a(QG, k_T, Q, rho):
-    r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
+    r"""A term in Taylor integration methods.
+
+    Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
     \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})` term for stochastic
     integration.
 
-    :param QG:          :math:`QG`.
-    :param k_T:         :math:`\vec{k}^T`.
-    :param Q:           :math:`Q`.
-    :param rho:         :math:`\rho`.
-    :returns:           :math:`\left(\vec{b}(\vec{\rho})\cdot
-                        \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})`.
+    Parameters
+    ----------
+    QG: numpy.array
+        :math:`QG`.
+    k_T: numpy.array
+        :math:`\vec{k}^T`.
+    Q: numpy.array
+        :math:`Q`.
+    rho: numpy.array
+        :math:`\rho`.
 
-    '''
+    Returns
+    -------
+    numpy.array
+        :math:`\left(\vec{b}(\vec{\rho})\cdot
+        \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})`.
+
+    """
     return np.dot(QG + np.dot(k_T, rho)*Q, rho)
 
 def a_dx_b(GQ, k_T, Q, k_T_Q, rho):
-    r'''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
+    r"""A term in Taylor integration methods.
+
+    Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
     \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})` term for stochastic
     integration.
 
-    :param GQ:          :math:`GQ`.
-    :param k_T:         :math:`\vec{k}^T`.
-    :param Q:           :math:`Q`.
-    :param k_T_Q:       :math:`\vec{k}^TQ`.
-    :param rho:         :math:`\rho`.
-    :returns:           :math:`\left(\vec{a}(\vec{\rho})\cdot
-                        \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})`.
+    GQ: numpy.array
+        :math:`GQ`.
+    k_T: numpy.array
+        :math:`\vec{k}^T`.
+    Q: numpy.array
+        :math:`Q`.
+    k_T_Q: numpy.array
+        :math:`\vec{k}^TQ`.
+    rho: numpy.array
+        :math:`\rho`.
 
-    '''
+    Returns
+    -------
+    numpy.array
+        :math:`\left(\vec{a}(\vec{\rho})\cdot
+        \vec{\nabla}_{\vec{\rho}}\right)\vec{b}(\vec{\rho})`.
+
+    """
     return np.dot(GQ + np.dot(k_T, rho)*Q, rho) + np.dot(k_T_Q, rho)*rho
 
 def a_dx_a(Q2, rho):
-    r'''Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
+    r"""A term in Taylor integration methods.
+
+    Function to return the :math:`\left(\vec{a}(\vec{\rho})\cdot
     \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})` term for stochastic
     integration.
 
-    :param Q2:          :math:`Q^2`.
-    :param rho:         :math:`\rho`.
-    :returns:           :math:`\left(\vec{a}(\vec{\rho})\cdot
-                        \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})`.
+    Parameters
+    ----------
+    Q2: numpy.array
+        :math:`Q^2`.
+    rho: numpy.array
+        :math:`\rho`.
 
-    '''
+    Returns
+    -------
+    numpy.array
+        :math:`\left(\vec{a}(\vec{\rho})\cdot
+        \vec{\nabla}_{\vec{\rho}}\right)\vec{a}(\vec{\rho})`.
+
+    """
     return np.dot(Q2, rho)
 
 def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
-    r'''Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
+    r"""A term in Taylor integration methods.
+
+    Function to return the :math:`\left(\vec{b}(\vec{\rho})\cdot
     \vec{\nabla}_{\vec{\rho}}\right)^2\vec{b}(\vec{\rho})` term for stochastic
     integration.
 
-    :param G3:          :math:`G^3`.
-    :param G2:          :math:`G^2`.
-    :param G:           :math:`G`.
-    :param k_T:         :math:`\vec{k}^T`.
-    :param k_T_G:       :math:`\vec{k}^TG`.
-    :param k_T_G2:      :math:`\vec{k}^TG^2`.
-    :param rho:         :math:`\rho`.
-    :returns:           :math:`\left(\vec{b}(\vec{\rho})\cdot
-                        \vec{\nabla}_{\vec{\rho}}\right)^2\vec{b}(\vec{\rho})`.
+    Parameters
+    ----------
+    G3: numpy.array
+        :math:`G^3`.
+    G2: numpy.array
+        :math:`G^2`.
+    G: numpy.array
+        :math:`G`.
+    k_T: numpy.array
+        :math:`\vec{k}^T`.
+    k_T_G: numpy.array
+        :math:`\vec{k}^TG`.
+    k_T_G2: numpy.array
+        :math:`\vec{k}^TG^2`.
+    rho: numpy.array
+        :math:`\rho`.
 
-    '''
+    Returns
+    -------
+    numpy.array
+        :math:`\left(\vec{b}(\vec{\rho})\cdot
+        \vec{\nabla}_{\vec{\rho}}\right)^2\vec{b}(\vec{\rho})`.
+
+    """
     k_rho_dot = np.dot(k_T, rho)
     k_T_G_rho_dot = np.dot(k_T_G, rho)
     k_T_G2_rho_dot = np.dot(k_T_G2, rho)
@@ -97,24 +158,34 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
                            6*k_rho_dot**3)*rho)
 
 def b_b_dx_dx_b(G, k_T, k_T_G, rho):
-    r'''Function to return the
-    :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma b^\mu\hat{e}_\mu` term for
-    stochastic integration.
+    r"""A term in Taylor integration methods.
 
-    :param G:           :math:`G`.
-    :param k_T:         :math:`\vec{k}^T`.
-    :param k_T_G:       :math:`\vec{k}^TG`.
-    :param rho:         :math:`\rho`.
-    :returns:           :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
-                        b^\mu\hat{e}_\mu`
+    Function to return the :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
+    b^\mu\hat{e}_\mu` term for stochastic integration.
 
-    '''
+    Parameters
+    ----------
+    G: numpy.array
+        :math:`G`.
+    k_T: numpy.array
+        :math:`\vec{k}^T`.
+    k_T_G: numpy.array
+        :math:`\vec{k}^TG`.
+    rho: numpy.array
+        :math:`\rho`.
+
+    Returns
+    -------
+    numpy.array
+        :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma b^\mu\hat{e}_\mu`
+
+    """
     k_rho_dot = np.dot(k_T, rho)
     k_T_G_rho_dot = np.dot(k_T_G, rho)
     return 2*(k_T_G_rho_dot + k_rho_dot**2)*(np.dot(G, rho) + k_rho_dot*rho)
 
 class Solution:
-    r'''Integrated solution to a differential equation.
+    r"""Integrated solution to a differential equation.
 
     Packages the vectorized solution with the basis it is vectorized with
     respect to along with providing convenient functions for returning
@@ -122,26 +193,26 @@ class Solution:
     value of an observable) without requiring the user to know anything about
     the particular representation used for numerical integration.
 
-    '''
+    """
     def __init__(self, vec_soln, basis):
         self.vec_soln = vec_soln
         self.basis = basis
 
     def get_expectations(self, observable):
-        r'''Calculate the expectation value of an observable for all times.
-        
+        r"""Calculate the expectation value of an observable for all times.
+
         Returns
         -------
         numpy.array
             The expectation values of an observable for all the calculated
             times.
 
-        '''
+        """
         dual = sb.dualize(observable, self.basis).real
         return np.dot(self.vec_soln, dual)
 
     def get_purities(self):
-        r'''Calculate the purity of the state for all times.
+        r"""Calculate the purity of the state for all times.
 
         Returns
         -------
@@ -149,25 +220,25 @@ class Solution:
             The purity :math:`\operatorname{Tr}[\rho^2]` at each calculated
             time.
 
-        '''
+        """
         basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
                                for op in self.basis])
         return np.dot(self.vec_soln**2, basis_dual)
 
     def get_density_matrices(self):
-        r'''Represent the solution as a sequence of Hermitian arrays.
-        
+        r"""Represent the solution as a sequence of Hermitian arrays.
+
         Returns
         -------
         list of numpy.array
             The density matrix at each calculated time.
 
-        '''
+        """
         return [sum([comp*op for comp, op in zip(state, self.basis)])
                 for state in self.vec_soln]
 
 class GaussIntegrator:
-    r'''Template class for Gaussian integrators.
+    r"""Template class for Gaussian integrators.
 
     Defines the most basic constructor shared by all integrators of Gaussian
     ordinary and stochastic master equations.
@@ -191,7 +262,7 @@ class GaussIntegrator:
         evolution operator. Will save computation time if already known and
         don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
 
-    '''
+    """
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None, **kwargs):
         if basis is None:
             d = c_op.shape[0]
@@ -211,7 +282,7 @@ class GaussIntegrator:
         raise NotImplementedError()
 
 class UncondGaussIntegrator(GaussIntegrator):
-    r'''Integrator for an unconditional Gaussian master equation.
+    r"""Integrator for an unconditional Gaussian master equation.
 
     Parameters
     ----------
@@ -232,12 +303,12 @@ class UncondGaussIntegrator(GaussIntegrator):
         evolution operator. Will save computation time if already known and
         don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
 
-    '''
+    """
     def Dfun(self, rho, t):
         return self.Q
 
     def integrate(self, rho_0, times):
-        r'''Integrate the equation for a list of times with given initial
+        r"""Integrate the equation for a list of times with given initial
         conditions.
 
         :param rho_0:   The initial state of the system
@@ -248,13 +319,13 @@ class UncondGaussIntegrator(GaussIntegrator):
                         specified times
         :rtype:         `Solution`
 
-        '''
+        """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return Solution(vec_soln, self.basis)
 
 class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
-    r'''Template class for integrators of strong order >= 0.5.
+    r"""Template class for integrators of strong order >= 0.5.
 
     Defines the most basic constructor shared by all integrators of Gaussian
     homodyne stochastic master equations of strong order >= 0.5.
@@ -282,7 +353,7 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
         the stochastic evolution operator.  Will save computation time if
         already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
-    '''
+    """
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
                  diffusion_reps=None, **kwargs):
         super(Strong_0_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
@@ -306,7 +377,7 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
         raise NotImplementedError()
 
     def gen_meas_record(self, rho_0, times, U1s=None):
-        r'''Simulate a measurement record.
+        r"""Simulate a measurement record.
 
         Integrate for a sequence of times with a given initial condition (and
         optionally specified white noise), returning a measurement record along
@@ -338,7 +409,7 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
             The components of the vecorized :math:`\rho` for all specified
             times and an array of incremental measurement outcomes
 
-        '''
+        """
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
 
@@ -353,35 +424,35 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
         return soln, dMs
 
 class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
-    r'''Template class for integrators of the Gaussian homodyne stochastic
-    master equation of strong order >= 1.
+    r"""Template class for integrators of strong order >= 1.
 
-    :param c_op:    The coupling operator
-    :type c_op:     `numpy.array`
-    :param M_sq:    The squeezing parameter
-    :type M_sq:     complex
-    :param N:       The thermal parameter
-    :type N:        positive real
-    :param H:       The plant Hamiltonian
-    :type H:        `numpy.array`
-    :param basis:   The Hermitian basis to vectorize the operators in terms of
-                    (with the component proportional to the identity in last
-                    place) If no basis is provided the generalized Gell-Mann
-                    basis will be used.
-    :type basis:    `list(numpy.array)`
-    :param drift_rep:   The real matrix Q that acts on the vectorized rho as the
-                        deterministic evolution operator. Will save computation
-                        time if already known and don't need to calculate from
-                        `c_op`, `M_sq`, `N`, and `H`.
-    :type drift_rep:    `numpy.array`
-    :param diffusion_reps:  The real matrix G and row vector k_T that act on the
-                            vectorized rho as the stochastic evolution operator.
-                            Will save computation time if already known and
-                            don't need to calculate from `c_op`, `M_sq`, and
-                            `N`.
-    :type diffusion_reps:   `{'G': numpy.array, 'k_T': numpy.array}`
+    Defines the most basic constructor shared by all integrators of Gaussian
+    homodyne stochastic master equations of strong order >= 1.
 
-    '''
+    Parameters
+    ----------
+    c_op : numpy.array
+        The coupling operator
+    M_sq : complex float
+        The squeezing parameter
+    N : non-negative float
+        The thermal parameter
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+    diffusion_reps : dict of numpy.array, optional
+        The real matrix G and row vector k_T that act on the vectorized rho as
+        the stochastic evolution operator.  Will save computation time if
+        already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
+
+    """
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
                  diffusion_reps=None, **kwargs):
         super(Strong_1_0_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
@@ -392,35 +463,35 @@ class Strong_1_0_HomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
         self.G2 = np.dot(self.G, self.G)
 
 class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
-    r'''Template class for integrators of the Gaussian homodyne stochastic
-    master equation of strong order >= 1.
+    r"""Template class for integrators of strong order >= 1.5.
 
-    :param c_op:    The coupling operator
-    :type c_op:     `numpy.array`
-    :param M_sq:    The squeezing parameter
-    :type M_sq:     complex
-    :param N:       The thermal parameter
-    :type N:        positive real
-    :param H:       The plant Hamiltonian
-    :type H:        `numpy.array`
-    :param basis:   The Hermitian basis to vectorize the operators in terms of
-                    (with the component proportional to the identity in last
-                    place) If no basis is provided the generalized Gell-Mann
-                    basis will be used.
-    :type basis:    `list(numpy.array)`
-    :param drift_rep:   The real matrix Q that acts on the vectorized rho as the
-                        deterministic evolution operator. Will save computation
-                        time if already known and don't need to calculate from
-                        `c_op`, `M_sq`, `N`, and `H`.
-    :type drift_rep:    `numpy.array`
-    :param diffusion_reps:  The real matrix G and row vector k_T that act on the
-                            vectorized rho as the stochastic evolution operator.
-                            Will save computation time if already known and
-                            don't need to calculate from `c_op`, `M_sq`, and
-                            `N`.
-    :type diffusion_reps:   `{'G': numpy.array, 'k_T': numpy.array}`
+    Defines the most basic constructor shared by all integrators of Gaussian
+    homodyne stochastic master equations of strong order >= 1.5.
 
-    '''
+    Parameters
+    ----------
+    c_op : numpy.array
+        The coupling operator
+    M_sq : complex float
+        The squeezing parameter
+    N : non-negative float
+        The thermal parameter
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+    diffusion_reps : dict of numpy.array, optional
+        The real matrix G and row vector k_T that act on the vectorized rho as
+        the stochastic evolution operator.  Will save computation time if
+        already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
+
+    """
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
                  diffusion_reps=None, **kwargs):
         super(Strong_1_5_HomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
@@ -435,57 +506,59 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         self.k_T_Q = np.dot(self.k_T, self.Q)
 
 class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
-    r'''Integrator for the conditional Gaussian master equation that uses Euler
-    integration.
+    r"""Euler integrator for the conditional Gaussian master equation.
 
-    :param c_op:    The coupling operator
-    :type c_op:     `numpy.array`
-    :param M_sq:    The squeezing parameter
-    :type M_sq:     complex
-    :param N:       The thermal parameter
-    :type N:        positive real
-    :param H:       The plant Hamiltonian
-    :type H:        `numpy.array`
-    :param basis:   The Hermitian basis to vectorize the operators in terms of
-                    (with the component proportional to the identity in last
-                    place) If no basis is provided the generalized Gell-Mann
-                    basis will be used.
-    :type basis:    `list(numpy.array)`
-    :param drift_rep:   The real matrix Q that acts on the vectorized rho as the
-                        deterministic evolution operator. Will save computation
-                        time if already known and don't need to calculate from
-                        `c_op`, `M_sq`, `N`, and `H`.
-    :type drift_rep:    `numpy.array`
-    :param diffusion_reps:  The real matrix G and row vector k_T that act on the
-                            vectorized rho as the stochastic evolution operator.
-                            Will save computation time if already known and
-                            don't need to calculate from `c_op`, `M_sq`, and
-                            `N`.
-    :type diffusion_reps:   `{'G': numpy.array, 'k_T': numpy.array}`
+    Parameters
+    ----------
+    c_op : numpy.array
+        The coupling operator
+    M_sq : complex float
+        The squeezing parameter
+    N : non-negative float
+        The thermal parameter
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+    diffusion_reps : dict of numpy.array, optional
+        The real matrix G and row vector k_T that act on the vectorized rho as
+        the stochastic evolution operator.  Will save computation time if
+        already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
-    '''
+    """
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
-        r'''Integrate for a sequence of times with a given initial condition
-        (and optionally specified white noise).
+        r"""Integrate the initial value problem.
 
-        :param rho_0:   The initial state of the system
-        :type rho_0:    `numpy.array`
-        :param times:   A sequence of time points for which to solve for rho
-        :type times:    `list(real)`
-        :param U1s:     Samples from a standard-normal distribution used to
-                        construct Wiener increments :math:`\Delta W` for each
-                        time interval. Multiple rows may be included for
-                        independent trajectories.
-        :type U1s:      `numpy.array(len(times) - 1)`
-        :param U2s:     Unused, included to make the argument list uniform with
-                        higher-order integrators.
-        :type U2s:      `numpy.array(len(times) - 1)`
-        :returns:       The components of the vecorized :math:`\rho` for all
-                        specified times
-        :rtype:         `Solution`
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise).
 
-        '''
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+        U2s: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
@@ -494,20 +567,24 @@ class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
         return Solution(vec_soln, self.basis)
 
     def integrate_measurements(self, rho_0, times, dMs):
-        r'''Integrate system evolution conditioned on a measurement record for a
-        sequence of times with a given initial condition.
+        r"""Integrate system evolution conditioned on a measurement record.
 
-        :param rho_0:   The initial state of the system
-        :type rho_0:    `numpy.array`
-        :param times:   A sequence of time points for which to solve for rho
-        :type times:    `list(real)`
-        :param dMs:     Incremental measurement outcomes used to drive the SDE.
-        :type dMs:      `numpy.array(len(times) - 1)`
-        :returns:       The components of the vecorized :math:`\rho` for all
-                        specified times
-        :rtype:         `Solution`
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        dMs: numpy.array(len(times) - 1)
+            Incremental measurement outcomes used to drive the SDE.
 
-        '''
+        Returns
+        -------
+        Solution
+            The components of the vecorized :math:`\rho` for all specified
+            times
+
+        """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
 
         vec_soln = sde.meas_euler(self.a_fn, self.b_fn, self.dW_fn, rho_0_vec,
@@ -515,60 +592,64 @@ class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
         return Solution(vec_soln, self.basis)
 
 class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
-    r'''Integrator for the conditional Gaussian master equation that uses
-    Milstein integration.
+    r"""Milstein integrator for the conditional Gaussian master equation.
 
-    :param c_op:    The coupling operator
-    :type c_op:     `numpy.array`
-    :param M_sq:    The squeezing parameter
-    :type M_sq:     complex
-    :param N:       The thermal parameter
-    :type N:        positive real
-    :param H:       The plant Hamiltonian
-    :type H:        `numpy.array`
-    :param basis:   The Hermitian basis to vectorize the operators in terms of
-                    (with the component proportional to the identity in last
-                    place) If no basis is provided the generalized Gell-Mann
-                    basis will be used.
-    :type basis:    `list(numpy.array)`
-    :param drift_rep:   The real matrix Q that acts on the vectorized rho as the
-                        deterministic evolution operator. Will save computation
-                        time if already known and don't need to calculate from
-                        `c_op`, `M_sq`, `N`, and `H`.
-    :type drift_rep:    numpy.array
-    :param diffusion_reps:  The real matrix G and row vector k_T that act on the
-                            vectorized rho as the stochastic evolution operator.
-                            Will save computation time if already known and
-                            don't need to calculate from `c_op`, `M_sq`, and
-                            `N`.
-    :type diffusion_reps:   `{'G': numpy.array, 'k_T': numpy.array}`
+    Parameters
+    ----------
+    c_op : numpy.array
+        The coupling operator
+    M_sq : complex float
+        The squeezing parameter
+    N : non-negative float
+        The thermal parameter
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+    diffusion_reps : dict of numpy.array, optional
+        The real matrix G and row vector k_T that act on the vectorized rho as
+        the stochastic evolution operator.  Will save computation time if
+        already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
-    '''
+    """
 
     def b_dx_b_fn(self, rho, t):
+        # TODO: May want this to be defined by the constructor to facilitate
+        # numba optimization.
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
-        r'''Integrate for a sequence of times with a given initial condition
-        (and optionally specified white noise).
+        r"""Integrate the initial value problem.
 
-        :param rho_0:   The initial state of the system
-        :type rho_0:    `numpy.array`
-        :param times:   A sequence of time points for which to solve for rho
-        :type times:    `list(real)`
-        :param U1s:     Samples from a standard-normal distribution used to
-                        construct Wiener increments :math:`\Delta W` for each
-                        time interval. Multiple rows may be included for
-                        independent trajectories.
-        :type U1s:      `numpy.array(len(times) - 1)`
-        :param U2s:     Unused, included to make the argument list uniform with
-                        higher-order integrators.
-        :type U2s:      `numpy.array(len(times) - 1)`
-        :returns:       The components of the vecorized :math:`\rho` for all
-                        specified times
-        :rtype:         `Solution`
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise).
 
-        '''
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+        U2s: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
@@ -578,20 +659,24 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         return Solution(vec_soln, self.basis)
 
     def integrate_measurements(self, rho_0, times, dMs):
-        r'''Integrate system evolution conditioned on a measurement record for a
-        sequence of times with a given initial condition.
+        r"""Integrate system evolution conditioned on a measurement record.
 
-        :param rho_0:   The initial state of the system
-        :type rho_0:    `numpy.array`
-        :param times:   A sequence of time points for which to solve for rho
-        :type times:    `list(real)`
-        :param dMs:     Incremental measurement outcomes used to drive the SDE.
-        :type dMs:      `numpy.array(len(times) - 1)`
-        :returns:       The components of the vecorized :math:`\rho` for all
-                        specified times
-        :rtype:         `Solution`
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        dMs: numpy.array(len(times) - 1)
+            Incremental measurement outcomes used to drive the SDE.
 
-        '''
+        Returns
+        -------
+        Solution
+            The components of the vecorized :math:`\rho` for all specified
+            times
+
+        """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
 
         vec_soln = sde.meas_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
@@ -599,11 +684,11 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         return Solution(vec_soln, self.basis)
 
 class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
-    r'''Integrator included to test if grid convergence could identify an error
+    r"""Integrator included to test if grid convergence could identify an error
     I originally had in my Milstein integrator (missing a factor of 1/2 in front
     of the term that's added to the Euler scheme)
 
-    '''
+    """
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
@@ -615,33 +700,30 @@ class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
         return Solution(vec_soln, self.basis)
 
 class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
-    r"""Integrator for the conditional Gaussian master equation that uses
-    strong order 1.5 Taylor integration.
+    r"""Order 1.5 Taylor ntegrator for the conditional Gaussian master equation.
 
-    :param c_op:    The coupling operator
-    :type c_op:     `numpy.array`
-    :param M_sq:    The squeezing parameter
-    :type M_sq:     complex
-    :param N:       The thermal parameter
-    :type N:        positive real
-    :param H:       The plant Hamiltonian
-    :type H:        `numpy.array`
-    :param basis:   The Hermitian basis to vectorize the operators in terms of
-                    (with the component proportional to the identity in last
-                    place) If no basis is provided the generalized Gell-Mann
-                    basis will be used.
-    :type basis:    `list(numpy.array)`
-    :param drift_rep:   The real matrix Q that acts on the vectorized rho as the
-                        deterministic evolution operator. Will save computation
-                        time if already known and don't need to calculate from
-                        `c_op`, `M_sq`, `N`, and `H`.
-    :type drift_rep:    numpy.array
-    :param diffusion_reps:  The real matrix G and row vector k_T that act on the
-                            vectorized rho as the stochastic evolution operator.
-                            Will save computation time if already known and
-                            don't need to calculate from `c_op`, `M_sq`, and
-                            `N`.
-    :type diffusion_reps:   `{'G': numpy.array, 'k_T': numpy.array}`
+    Parameters
+    ----------
+    c_op : numpy.array
+        The coupling operator
+    M_sq : complex float
+        The squeezing parameter
+    N : non-negative float
+        The thermal parameter
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+    diffusion_reps : dict of numpy.array, optional
+        The real matrix G and row vector k_T that act on the vectorized rho as
+        the stochastic evolution operator.  Will save computation time if
+        already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
     """
     def a_fn(self, rho):
@@ -673,28 +755,31 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         return 0
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
-        r'''Integrate for a sequence of times with a given initial condition
-        (and optionally specified white noise).
+        r"""Integrate the initial value problem.
 
-        :param rho_0:   The initial state of the system
-        :type rho_0:    `numpy.array`
-        :param times:   A sequence of time points for which to solve for rho
-        :type times:    `list(real)`
-        :param U1s:     Samples from a standard-normal distribution used to
-                        construct Wiener increments :math:`\Delta W` for each
-                        time interval. Multiple rows may be included for
-                        independent trajectories.
-        :type U1s:      `numpy.array(N, len(times) - 1)`
-        :param U2s:     Samples from a standard-normal distribution used to
-                        construct multiple-Ito increments :math:`\Delta Z` for
-                        each time interval. Multiple rows may be included for
-                        independent trajectories.
-        :type U2s:      `numpy.array(N, len(times) - 1)`
-        :returns:       The components of the vecorized :math:`\rho` for all
-                        specified times
-        :rtype:         `Solution`
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise).
 
-        '''
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+        U2s: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) -1)
@@ -710,12 +795,14 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         return Solution(vec_soln, self.basis)
 
 class TrDecMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
-    '''Only do the linear evolution, where the decrease in trace now encodes
+    """Milstein integrator that does not preserve trace.
+
+    Only does the linear evolution, where the decrease in trace now encodes
     the likelihood of the particular trajectory. Might be more appropriate to
     include as a particulare `integrate_tr_dec` method in preëxisting integrator
     classes.
 
-    '''
+    """
     def __init__(self, c_op, M_sq, N, H, basis=None, drift_rep=None,
                  diffusion_reps=None, **kwargs):
         super(TrDecMilsteinHomodyneIntegrator, self).__init__(c_op, M_sq, N, H,
@@ -726,30 +813,37 @@ class TrDecMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
         self.k_T_G = np.zeros(self.G.shape)
 
 class IntegratorFactory:
-    r'''A class that pre-computes some of the things in common to a family of
+    r"""Factory that pre-computes things for other integrators.
+
+    A class that pre-computes some of the things in common to a family of
     integrators one wants to construct instances of.
 
-    :param IntClass:        A class inheriting from `GaussIntegrator` that you
-                            want to create many instances of.
-    :param precomp_data:    Data needed by the `IntClass` constructor common
-                            across all integrators in the family of interest in
-                            the form that can be passed to the `parameter_fn` as
-                            `precomp_data`.
-    :param parameter_fn:    Function that takes the parameters defining the
-                            instance of the family to be generated and the
-                            precomputed data and returns `**kwargs` to pass to
-                            the constructor of `IntClass`.
+    Parameters
+    ----------
+    IntClass : Class of integrator
+        A class inheriting from :class:`GaussIntegrator` that you want to
+        create many instances of.
+    precomp_data
+        Data needed by the `IntClass` constructor common across all integrators
+        in the family of interest in the form that can be passed to the
+        `parameter_fn` as `precomp_data`.
+    parameter_fn
+        Function that takes the parameters defining the instance of the family
+        to be generated and the precomputed data and returns ``**kwargs`` to pass
+        to the constructor of `IntClass`.
 
-    '''
+    """
     def __init__(self, IntClass, precomp_data, parameter_fn):
         self.precomp_data = precomp_data
         self.parameter_fn = parameter_fn
         self.IntClass = IntClass
 
     def make_integrator(self, params):
-        '''Create a new instance of `IntClass` feeding `params` and
+        """Create a new integrator.
+
+        Create a new instance of `IntClass`, feeding `params` and
         `precomp_data` to the constructor.
 
-        '''
+        """
         constructor_kwargs = self.parameter_fn(params, self.precomp_data)
         return self.IntClass(**constructor_kwargs)
