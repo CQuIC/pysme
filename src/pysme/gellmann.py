@@ -8,21 +8,26 @@ import numpy as np
 from itertools import product
 
 def gellmann(j, k, d):
-    r"""Returns a generalized Gell-Mann matrix of dimension d. According to the
-    convention in *Bloch Vectors for Qubits* by Bertlmann and Krammer (2008),
-    returns :math:`\Lambda^j` for :math:`1\leq j=k\leq d-1`,
-    :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`,
-    :math:`\Lambda^{jk}_a` for :math:`1\leq j<k\leq d`, and
-    :math:`I` for :math:`j=k=d`.
+    r"""Returns a generalized Gell-Mann matrix of dimension d.
+    
+    According to the convention in *Bloch Vectors for Qubits* by Bertlmann and
+    Krammer (2008), returns :math:`\Lambda^j` for :math:`1\leq j=k\leq d-1`,
+    :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`, :math:`\Lambda^{jk}_a`
+    for :math:`1\leq j<k\leq d`, and :math:`I` for :math:`j=k=d`.
 
-    :param j: First index for generalized Gell-Mann matrix
-    :type j:  positive integer
-    :param k: Second index for generalized Gell-Mann matrix
-    :type k:  positive integer
-    :param d: Dimension of the generalized Gell-Mann matrix
-    :type d:  positive integer
-    :returns: A genereralized Gell-Mann matrix.
-    :rtype:   numpy.array
+    Parameters
+    ----------
+    j : positive integer
+        Index for generalized Gell-Mann matrix
+    k : positive integer
+        Index for generalized Gell-Mann matrix
+    d : positive integer
+        Dimension of the generalized Gell-Mann matrix
+
+    Returns
+    -------
+    numpy.array
+        A genereralized Gell-Mann matrix.
 
     """
 
@@ -45,8 +50,20 @@ def gellmann(j, k, d):
     return gjkd
 
 def get_basis(d):
-    r'''Return a basis of orthogonal Hermitian operators on a Hilbert space of
-    dimension d, with the identity element in the last place.
+    r"""Return a basis of operators.
+    
+    The basis is made up of orthogonal Hermitian operators on a Hilbert space
+    of dimension d, with the identity element in the last place.
 
-    '''
+    Parameters
+    ----------
+    d : int
+        The dimension of the Hilbert space.
+
+    Returns
+    -------
+    list of numpy.array
+        The basis of operators.
+
+    """
     return [gellmann(j, k, d) for j, k in product(range(1, d + 1), repeat=2)]
