@@ -3,9 +3,21 @@ from itertools import product
 import pysme.gellmann as gm
 
 def orthonormalize(A):
-    """Return an orthonormal basis where A has support only on the first three
-    elements. The first element is guaranteed to be proportional to the
-    identity.
+    """Return an orthonormal basis in which `A` has a sparse representation.
+    
+    `A` will have support only on the first three elements. The first element
+    is guaranteed to be proportional to the identity. This basis is
+    constructed using Gram-Schmidt orthogonalization.
+
+    Parameters
+    ----------
+    A : numpy.array
+        The operator to be represented sparsely.
+
+    Returns
+    -------
+    list of numpy.array
+        A basis in which `A` is represented sparsely.
 
     """
 
