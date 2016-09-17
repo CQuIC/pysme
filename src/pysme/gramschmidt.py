@@ -1,3 +1,10 @@
+"""Orthonormalize operator bases.
+
+  .. module:: gramschmidt.py
+     :synopsis: Orthonormalize operator bases
+  .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+
+"""
 import numpy as np
 from itertools import product
 import pysme.gellmann as gm

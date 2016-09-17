@@ -1,7 +1,8 @@
-"""
-.. py:module:: integrate.py
-   :synopsis: Integrate stochastic master equations in vectorized form.
-.. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+"""Integrate stochastic master equations in vectorized form.
+
+    .. py:module:: integrate.py
+       :synopsis: Integrate stochastic master equations in vectorized form.
+    .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
 

@@ -1,5 +1,9 @@
 """Functions for testing convergence rates using grid convergence
 
+  .. module:: grid_conv.py
+     :synopsis: Functions for testing convergence rates using grid convergence
+  .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+
 """
 
 import numpy as np

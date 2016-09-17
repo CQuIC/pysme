@@ -1,7 +1,8 @@
-"""
-.. module:: sde.py
-   :synopsis: Numerical integration techniques
-.. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+"""Numerical integration techniques
+
+    .. module:: sde.py
+       :synopsis: Numerical integration techniques
+    .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
 

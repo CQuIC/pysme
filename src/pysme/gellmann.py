@@ -1,7 +1,8 @@
-"""
-.. module:: gellmann.py
-   :synopsis: Generate generalized Gell-Mann matrices
-.. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+"""Generate generalized Gell-Mann matrices.
+
+  .. module:: gellmann.py
+     :synopsis: Generate generalized Gell-Mann matrices
+  .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
 import numpy as np
