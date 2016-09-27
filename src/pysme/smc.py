@@ -148,3 +148,11 @@ class HomodyneQubitPrecessionModel(qi.Model):
                                                                     np.newaxis]
 
         return updated_modelparams
+
+    def simulate_experiment(self, modelparams, expparams, repeat=1):
+        # Code complains when I don't have this.
+        pass
+
+    def domain(self, expparams):
+        # Code complains when I don't have this.
+        pass
