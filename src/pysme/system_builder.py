@@ -1,8 +1,9 @@
-"""
-.. module:: system_builder.py
-   :synopsis: Build the matrix representation of the system of coupled
-              real-valued stochastic differential equations.
-.. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+"""Functions used in the construction of integrators
+
+    .. module:: system_builder.py
+       :synopsis: Build the matrix representation of the system of coupled
+                  real-valued stochastic differential equations.
+    .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
 
@@ -10,9 +11,7 @@ import numpy as np
 import itertools as it
 
 def recur_dot(mats):
-    """Perform numpy.dot on a list in a right-associative manner.
-
-    """
+    """Perform numpy.dot on a list in a right-associative manner."""
     if len(mats) == 0:
         return 1
     elif len(mats) == 1:
@@ -21,14 +20,21 @@ def recur_dot(mats):
         return np.dot(mats[0], recur_dot(mats[1:]))
 
 def norm_squared(operator):
-    """Returns the square of the `Frobenius norm
-    <https://en.wikipedia.org/wiki/Matrix_norm#Frobenius_norm>`_ of the
-    operator.
+    """Returns the square of the Frobenius norm of the operator.
+    
+    The `Frobenius norm
+    <https://en.wikipedia.org/wiki/Matrix_norm#Frobenius_norm>`_ of an
+    operator is analogous to the 2-norm of a vector.
 
-    :param operator:    The operator for which to calculate the squared norm
-    :type operator:     numpy.array
-    :returns:           The square of the norm of the operator
-    :return type:       Positive real
+    Parameters
+    ----------
+    operator : numpy.array
+        The operator for which to calculate the squared norm
+
+    Returns
+    -------
+    positive real
+        The square of the norm of the operator
 
     """
 
@@ -38,12 +44,17 @@ def norm_squared(operator):
 def vectorize(operator, basis):
     """Vectorize an operator in a particular operator basis.
 
-    :param operator:    The operator to vectorize
-    :type operator:     numpy.array
-    :param basis:       The basis to vectorize the operator in
-    :type basis:        list(numpy.array)
-    :returns:           The vector components
-    :rtype:             numpy.array
+    Parameters
+    ----------
+    operator : numpy.array
+        The operator to vectorize
+    basis : list(numpy.array)
+        The basis to vectorize the operator in
+
+    Returns
+    -------
+    numpy.array
+        The vector components
 
     """
     return np.array([np.tensordot(basis_el.conj().T, operator,
@@ -51,8 +62,7 @@ def vectorize(operator, basis):
                      norm_squared(basis_el) for basis_el in basis])
 
 def dualize(operator, basis):
-    r'''Take an operator to its dual vectorized form in a particular operator
-    basis.
+    r"""Take an operator to its dual vectorized form in some operator basis.
     
     Designed to work in conjunction with ``vectorize`` so that, given an
     orthogonal basis :math:`\{\Lambda^m\}` where
@@ -63,23 +73,25 @@ def dualize(operator, basis):
     other words it becomes an ordinaty dot product in this particular
     representation).
 
-    :param operator:    The operator to vectorize
-    :type operator:     numpy.array
-    :param basis:       The basis to vectorize the operator in
-    :type basis:        list(numpy.array)
-    :returns:           The vector components
-    :rtype:             numpy.array
+    Parameters
+    ----------
+    operator : numpy.array
+        The operator to vectorize
+    basis : list(numpy.array)
+        The basis to vectorize the operator in
 
-    '''
+    Returns
+    -------
+    numpy.array
+        The vector components
+
+    """
     return np.array([np.tensordot(basis_el, operator.conj().T,
                                   axes=[[1, 0], [0, 1]])
                      for basis_el in basis])
 
 def op_calc_setup(coupling_op, M_sq, N, H, partial_basis):
-    """Handle the repeated tasks performed every time a superoperator matrix is
-    computed.
-
-    """
+    """Do repeated tasks performed every time a superoperator is computed."""
 
     # Add the identity to the end of the basis to complete it (important for
     # some tests for the identity to be the last basis element).
@@ -131,7 +143,9 @@ def construct_G_k_T(c_op, M_sq, N, H, partial_basis):
 
 
 def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
-    r"""Return a matrix :math:`D` such that when :math:`\rho` is vectorized the
+    r"""Return the matrix form of the diffusion linear operator.
+    
+    Compute the matrix :math:`D` such that when :math:`\rho` is vectorized the
     expression
 
     .. math::
@@ -148,15 +162,18 @@ def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
-    :param coupling_op: The operator :math:`c` in matrix form
-    :type coupling_op:  numpy.array
-    :param basis:       An almost complete (minus identity), Hermitian,
-                        traceless, orthogonal basis for the operators (does not
-                        need to be normalized).
-    :type basis:        list(numpy.array)
-    :returns:           The matrix :math:`D` operating on a vectorized density
-                        operator
-    :rtype:             numpy.array
+    Parameters
+    ----------
+    coupling_op : numpy.array
+        operator :math:`c` in matrix form
+    basis : list(numpy.array)
+        An almost complete (minus identity), Hermitian, traceless, orthogonal
+        basis for the operators (does not need to be normalized).
+
+    Returns
+    -------
+    numpy.array
+        The matrix :math:`D` operating on a vectorized density operator
 
     """
     D_matrix = np.zeros((dim, dim)) # The matrix to return
@@ -189,14 +206,16 @@ def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
 # Vectorization page in the documentation.
 def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
                    **kwargs):
-    r"""Return a matrix :math:`E` such that when :math:`\rho` is vectorized the
+    r"""Return the matrix form of the squeezing double commutator operator.
+
+    Compute the matrix :math:`E` such that when :math:`\rho` is vectorized the
     expression
 
     .. math::
-    
+
        \frac{d\rho}{dt}=\left(\frac{M^*}{2}[c,[c,\rho]]+
        \frac{M}{2}[c^\dagger,[c^\dagger,\rho]]\right)
-        
+
     can be calculated by:
 
     .. math::
@@ -205,19 +224,22 @@ def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
 
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
-    
-    :param coupling_op: The operator :math:`c` in matrix form
-    :type coupling_op:  numpy.array
-    :param M_sq:        Complex squeezing parameter :math:`M` defined by
-                        :math:`\langle dB(t)dB(t)\rangle=Mdt`.
-    :type M_sq:         complex
-    :param basis:       An almost complete (minus identity), Hermitian,
-                        traceless, orthogonal basis for the operators (does not
-                        need to be normalized).
-    :type basis:        list(numpy.array)
-    :returns:           The matrix :math:`E` operating on a vectorized density
-                        operator
-    :rtype:             numpy.array
+
+    Parameters
+    ----------
+    coupling_op : numpy.array
+        operator :math:`c` in matrix form
+    M_sq : complex
+        Complex squeezing parameter :math:`M` defined by :math:`\langle
+        dB(t)dB(t)\rangle=Mdt`.
+    basis : list(numpy.array)
+        An almost complete (minus identity), Hermitian, traceless, orthogonal
+        basis for the operators (does not need to be normalized).
+
+    Returns
+    -------
+    numpy.array
+        The matrix :math:`E` operating on a vectorized density operator
 
     """
 
@@ -247,7 +269,9 @@ def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
 
 def hamiltonian_op(dim, H_vector, double_prods, basis_norms_sq, basis,
                    **kwargs):
-    r"""Return a matrix :math:`F` such that when :math:`\rho` is vectorized the
+    r"""Return the matrix form of the Hamiltonion evolution operator.
+
+    Compute the matrix :math:`F` such that when :math:`\rho` is vectorized the
     expression
 
     .. math::
@@ -262,16 +286,19 @@ def hamiltonian_op(dim, H_vector, double_prods, basis_norms_sq, basis,
 
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
-    
-    :param hamiltonian: The Hamiltonian :math:`H` in matrix form
-    :type hamiltonian:  numpy.array
-    :param basis:       An almost complete (minus identity), Hermitian,
-                        traceless, orthogonal basis for the operators (does not
-                        need to be normalized).
-    :type basis:        list(numpy.array)
-    :returns:           The matrix :math:`F` operating on a vectorized density
-                        operator
-    :rtype:             numpy.array
+
+    Parameters
+    ----------
+    hamiltonian : numpy.array
+        Hamiltonian :math:`H` in matrix form
+    basis : list(numpy.array)
+        An almost complete (minus identity), Hermitian, traceless, orthogonal
+        basis for the operators (does not need to be normalized).
+
+    Returns
+    -------
+    numpy.array
+        The matrix :math:`F` operating on a vectorized density operator
 
     """
 
@@ -291,7 +318,9 @@ def hamiltonian_op(dim, H_vector, double_prods, basis_norms_sq, basis,
     return F_matrix
 
 def weiner_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
-    r"""Return a the matrix-vector pair :math:`(G,\vec{k})` such that when
+    r"""Return the matrix and vector governing the stochastic evolution
+    
+    Compute the matrix-vector pair :math:`(G,\vec{k})` such that when
     :math:`\rho` is vectorized the expression
 
     .. math::
@@ -308,16 +337,19 @@ def weiner_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
     
-    :param coupling_op: The operator :math:`c` in matrix form
-    :type coupling_op:  numpy.array
-    :param basis:       An almost complete (minus identity), Hermitian,
-                        traceless, orthogonal basis for the operators (does not
-                        need to be normalized).
-    :type basis:        list(numpy.array)
-    :returns:           The matrix-vector pair :math:`(G,\vec{k})` operating on
-                        a vectorized density operator (k is returned as a
-                        row-vector)
-    :rtype:             tuple(numpy.array)
+    Parameters
+    ----------
+    coupling_op : numpy.array
+        operator :math:`c` in matrix form
+    basis : list(numpy.array)
+        An almost complete (minus identity), Hermitian, traceless, orthogonal
+        basis for the operators (does not need to be normalized).
+
+    Returns
+    -------
+    tuple(numpy.array)
+        The matrix-vector pair :math:`(G,\vec{k})` operating on a vectorized
+        density operator (k is returned as a row-vector)
 
     """
 

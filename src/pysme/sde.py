@@ -1,7 +1,8 @@
-"""
-.. module:: sde.py
-   :synopsis: Numerical integration techniques
-.. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
+"""Numerical integration techniques
+
+    .. module:: sde.py
+       :synopsis: Numerical integration techniques
+    .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
 
@@ -25,26 +26,26 @@ def euler(drift_fn, diffusion_fn, X0, ts, Us):
     where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
     distributed random variable with mean 0 and variance 1.
 
-    :param drift_fn:        Computes the drift coefficient
-                            :math:`\vec{a}(\vec{X},t)`
-    :type drift_fn:         callable(X, t)
-    :param diffusion_fn:    Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X},t)`
-    :type diffusion_fn:     callable(X, t)
-    :param X0:              Initial condition on X
-    :type X0:               array
-    :param ts:              A sequence of time points for which to solve for X.
-                            The initial value point should be the first element
-                            of this sequence.
-    :type ts:               array
-    :param Us:              Normalized Weiner increments for each time step
-                            (i.e. samples from a Gaussian distribution with mean
-                            0 and variance 1).
-    :type Us:               array, shape=(len(t) - 1)
-    :return:                Array containing the value of X for each desired
-                            time in t, with the initial value `X0` in the first
-                            row.
-    :rtype:                 numpy.array, shape=(len(ts), len(X0))
+    Parameters
+    ----------
+    drift_fn : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : array, shape=(len(t) - 1)
+        Normalized Weiner increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
 
     """
 
@@ -79,29 +80,28 @@ def meas_euler(drift_fn, diffusion_fn, dW_fn, X0, ts, dMs):
     where :math:`\Delta W_i=f(\Delta M_i,\vec{X}, t)`, :math:`\Delta M_i` being
     the incremental measurement record being used to drive the SDE.
 
-    :param drift_fn:        Computes the drift coefficient
-                            :math:`\vec{a}(\vec{X},t)`
-    :type drift_fn:         callable(X, t)
-    :param diffusion_fn:    Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X},t)`
-    :type diffusion_fn:     callable(X, t)
-    :param dW_fn:           The function that converts the incremental
-                            measurement and current state to the Wiener
-                            increment.
-    :type dW_fn:            callable(dM, dt, X, t)
-    :param X0:              Initial condition on X
-    :type X0:               array
-    :param ts:              A sequence of time points for which to solve for X.
-                            The initial value point should be the first element
-                            of this sequence.
-    :type ts:               array
-    :param dMs:             Incremental measurement outcomes used to drive the
-                            SDE.
-    :type dMs:              array, shape=(len(t) - 1)
-    :return:                Array containing the value of X for each desired
-                            time in t, with the initial value `X0` in the first
-                            row.
-    :rtype:                 numpy.array, shape=(len(ts), len(X0))
+    Parameters
+    ----------
+    drift_fn : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    dW_fn : callable(dM, dt, X, t)
+        The function that converts the incremental measurement and current
+        state to the Wiener increment.
+    X0 : array
+        Initial condition on X
+    ts : array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    dMs : array, shape=(len(t) - 1)
+        Incremental measurement outcomes used to drive the SDE.
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
 
     """
 
@@ -136,30 +136,30 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
     distributed random variable with mean 0 and variance 1.
 
-    :param drift:           Computes the drift coefficient
-                            :math:`\vec{a}(\vec{X},t)`
-    :type drift:            callable(X, t)
-    :param diffusion:       Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X},t)`
-    :type diffusion:        callable(X, t)
-    :param b_dx_b:          Computes the correction coefficient
-                            :math:`\left(\vec{b}(\vec{X},t)\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
-    :type b_dx_b:           callable(X, t)
-    :param X0:              Initial condition on X
-    :type X0:               array
-    :param ts:              A sequence of time points for which to solve for X.
-                            The initial value point should be the first element
-                            of this sequence.
-    :type ts:               array
-    :param Us:              Normalized Weiner increments for each time step
-                            (i.e. samples from a Gaussian distribution with mean
-                            0 and variance 1).
-    :type Us:               array, shape=(len(t) - 1)
-    :return:                Array containing the value of X for each desired
-                            time in t, with the initial value `X0` in the first
-                            row.
-    :rtype:                 numpy.array, shape=(len(ts), len(X0))
+    Parameters
+    ----------
+    drift : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    b_dx_b : callable(X, t)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(\vec{X},t)\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : array, shape=(len(t) - 1)
+        Normalized Weiner increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
 
     """
 
@@ -196,33 +196,32 @@ def meas_milstein(drift_fn, diffusion_fn, b_dx_b_fn, dW_fn, X0, ts, dMs):
     where :math:`\Delta W_i=f(\Delta M_i,\vec{X}, t)`, :math:`\Delta M_i` being
     the incremental measurement record being used to drive the SDE.
 
-    :param drift_fn:        Computes the drift coefficient
-                            :math:`\vec{a}(\vec{X},t)`
-    :type drift_fn:         callable(X, t)
-    :param diffusion_fn:    Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X},t)`
-    :type diffusion_fn:     callable(X, t)
-    :param b_dx_b_fn:       Computes the correction coefficient
-                            :math:`\left(\vec{b}(\vec{X},t)\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
-    :type b_dx_b_fn:        callable(X, t)
-    :param dW_fn:           The function that converts the incremental
-                            measurement and current state to the Wiener
-                            increment.
-    :type dW_fn:            callable(dM, dt, X, t)
-    :param X0:              Initial condition on X
-    :type X0:               array
-    :param ts:              A sequence of time points for which to solve for X.
-                            The initial value point should be the first element
-                            of this sequence.
-    :type ts:               array
-    :param dMs:             Incremental measurement outcomes used to drive the
-                            SDE.
-    :type dMs:              array, shape=(len(t) - 1)
-    :return:                Array containing the value of X for each desired
-                            time in t, with the initial value `X0` in the first
-                            row.
-    :rtype:                 numpy.array, shape=(len(ts), len(X0))
+    Parameters
+    ----------
+    drift_fn : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    b_dx_b_fn : callable(X, t)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(\vec{X},t)\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
+    dW_fn : callable(dM, dt, X, t)
+        The function that converts the incremental measurement and current
+        state to the Wiener increment.
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    dMs : numpy.array, shape=(len(t) - 1)
+        Incremental measurement outcomes used to drive the SDE.
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
 
     """
 
@@ -267,58 +266,50 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
        \frac{1}{3}(\Delta W_i)^2-\Delta t_i\right)\Delta W_i
        \end{align}
 
-    :param drift:           Computes the drift coefficient
-                            :math:`\vec{a}(\vec{X})`
-    :type drift:            callable(X)
-    :param diffusion:       Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X})`
-    :type diffusion:        callable(X)
-    :param b_dx_b:          Computes the coefficient
-                            :math:`\left(\vec{b}(\vec{X})\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X})`
-    :type b_dx_b:           callable(X)
-    :param b_dx_a:          Computes the coefficient
-                            :math:`\left(\vec{b}(\vec{X})\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{a}(\vec{X})`
-    :type b_dx_a:           callable(X)
-    :param a_dx_b:          Computes the coefficient
-                            :math:`\left(\vec{a}(\vec{X})\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X})`
-    :type a_dx_b:           callable(X)
-    :param a_dx_a:          Computes the coefficient
-                            :math:`\left(\vec{a}(\vec{X})\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{a}(\vec{X})`
-    :type a_dx_a:           callable(X)
-    :param b_dx_b_dx_b:     Computes the coefficient
-                            :math:`\left(\vec{b}(\vec{X})\cdot
-                            \vec{\nabla}_{\vec{X}}\right)^2\vec{b}(\vec{X})`
-    :type b_dx_b_dx_b:      callable(X)
-    :param b_b_dx_dx_b:     Computes
-                            :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
-                            b^\mu\hat{e}_\mu`.
-    :type b_dx_b_dx_b:      callable(X)
-    :param b_b_dx_dx_a:     Computes
-                            :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
-                            a^\mu\hat{e}_\mu`.
-    :type b_dx_b_dx_a:      callable(X)
-    :param X0:              Initial condition on X
-    :type X0:               array
-    :param ts:              A sequence of time points for which to solve for X.
-                            The initial value point should be the first element
-                            of this sequence.
-    :type ts:               array
-    :param U1s:             Normalized Weiner increments for each time step
-                            (i.e. samples from a Gaussian distribution with mean
-                            0 and variance 1).
-    :type U1s:              array, shape=(len(t) - 1)
-    :param U2s:             Normalized Weiner increments for each time step
-                            (i.e. samples from a Gaussian distribution with mean
-                            0 and variance 1).
-    :type U2s:              array, shape=(len(t) - 1)
-    :return:                Array containing the value of X for each desired
-                            time in t, with the initial value `X0` in the first
-                            row.
-    :rtype:                 numpy.array, shape=(len(t), len(X0))
+    Parameters
+    ----------
+    drift : callable(X)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X})`
+    diffusion : callable(X)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X})`
+    b_dx_b : callable(X)
+        Computes the coefficient :math:`\left(\vec{b}(\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X})`
+    b_dx_a : callable(X)
+        Computes the coefficient :math:`\left(\vec{b}(\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{a}(\vec{X})`
+    a_dx_b : callable(X)
+        Computes the coefficient :math:`\left(\vec{a}(\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X})`
+    a_dx_a : callable(X)
+        Computes the coefficient :math:`\left(\vec{a}(\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{a}(\vec{X})`
+    b_dx_b_dx_b : callable(X)
+        Computes the coefficient :math:`\left(\vec{b}(\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)^2\vec{b}(\vec{X})`
+    b_b_dx_dx_b : callable(X)
+        Computes :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
+        b^\mu\hat{e}_\mu`.
+    b_b_dx_dx_a : callable(X)
+        Computes :math:`b^\nu b^\sigma\partial_\nu\partial_\sigma
+        a^\mu\hat{e}_\mu`.
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    U1s : numpy.array, shape=(len(t) - 1)
+        Normalized Weiner increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+    U2s : numpy.array, shape=(len(t) - 1)
+        Normalized Weiner increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(t), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
 
     """
 
@@ -359,30 +350,30 @@ def faulty_milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
     distributed random variable with mean 0 and variance 1.
 
-    :param drift:           Computes the drift coefficient
-                            :math:`\vec{a}(\vec{X},t)`
-    :type drift:            callable(X, t)
-    :param diffusion:       Computes the diffusion coefficient
-                            :math:`\vec{b}(\vec{X},t)`
-    :type diffusion:        callable(X, t)
-    :param b_dx_b:          Computes the correction coefficient
-                            :math:`\left(\vec{b}(\vec{X},t)\cdot
-                            \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
-    :type b_dx_b:           callable(X, t)
-    :param X0:              Initial condition on X
-    :type X0:               array
-    :param ts:              A sequence of time points for which to solve for X.
-                            The initial value point should be the first element
-                            of this sequence.
-    :type ts:               array
-    :param Us:              Normalized Weiner increments for each time step
-                            (i.e. samples from a Gaussian distribution with mean
-                            0 and variance 1).
-    :type Us:               array, shape=(len(t) - 1)
-    :return:                Array containing the value of X for each desired
-                            time in t, with the initial value `X0` in the first
-                            row.
-    :rtype:                 numpy.array, shape=(len(t), len(X0))
+    Parameters
+    ----------
+    drift : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    b_dx_b : callable(X, t)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(\vec{X},t)\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(\vec{X},t)`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : numpy.array, shape=(len(t) - 1)
+        Normalized Weiner increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(t), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
 
     """
 
