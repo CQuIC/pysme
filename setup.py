@@ -18,4 +18,5 @@ setup(name='pysme',
       setup_requires=['numpy', 'Cython'],
       packages=['pysme'],
       package_dir={'pysme': 'src/pysme'},
+      extras_require={'smc': ['qinfer']},
      )
