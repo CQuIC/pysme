@@ -1,6 +1,6 @@
 """
 .. py:module:: smc.py
-   :synopsis: Do stochastic Monte Carlo inference using qinfer.
+   :synopsis: Do sequential Monte Carlo inference using qinfer.
 .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
@@ -17,7 +17,7 @@ except ImportError:
     import warnings
     warnings.warn(
             "Could not import qinfer. "
-            "Stochastic Monte Carlo support will be disabled."
+            "Sequential Monte Carlo support will be disabled."
             )
     qi = None
 
