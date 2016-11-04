@@ -47,7 +47,7 @@ where I have adopted an index convention for vectors such that
    \end{align}
 
 and indices that appear in both upper and lower positions in the same term are
-implicitly summer over.
+implicitly summed over.
 
 For
 :math:`b^\mu=G^\mu_\nu\rho^\nu+k_\nu\rho^\nu\rho^\mu` as defined in
