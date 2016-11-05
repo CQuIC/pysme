@@ -2,6 +2,7 @@ build/*
 dist/*
 pysme.egg-info/*
 src/pysme.egg-info/*
+.eggs/*
 *.swp
 *.pyc
 doc/_build/*
