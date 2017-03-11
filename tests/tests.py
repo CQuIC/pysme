@@ -298,6 +298,12 @@ def test_solution_functions():
     check_density_matrices(solution)
     check_purities(solution)
 
+    taylor_1_5_integrator = integrate.Taylor_1_5_HomodyneIntegrator(L, 0, 0,
+            np.zeros(L.shape))
+    t15_soln = taylor_1_5_integrator.integrate(rho_0, times)
+    check_density_matrices(t15_soln)
+    check_purities(t15_soln)
+
 def test_against_matrix_implementation():
     r'''Compare an Euler trajectory computed naively using matrices to the
     Euler trajectory computed by our implementation for a particular
