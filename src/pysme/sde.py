@@ -322,10 +322,11 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
 
     for t, dt, dW, dZ in zip(ts[:-1], dts, dWs, dZs):
         X = Xs[-1]
-        Xs.append(X + drift(X)*dt + diffusion(X)*dW + b_dx_b(X)*(dW**2 - dt)/2 +
-                  b_dx_a(X)*dZ + (a_dx_b(X)+b_b_dx_dx_b(X)/2)*(dW*dt - dZ) +
-                  (a_dx_a(X)+b_b_dx_dx_a(X)/2)*dt**2/2 +
-                  b_dx_b_dx_b(X)*(dW**2/3 - dt)*dW/2)
+        Xs = np.vstack((Xs, X + drift(X)*dt + diffusion(X)*dW +
+                        b_dx_b(X)*(dW**2 - dt)/2 + b_dx_a(X)*dZ +
+                        (a_dx_b(X)+b_b_dx_dx_b(X)/2)*(dW*dt - dZ) +
+                        (a_dx_a(X)+b_b_dx_dx_a(X)/2)*dt**2/2 +
+                        b_dx_b_dx_b(X)*(dW**2/3 - dt)*dW/2))
 
     return Xs
 
