@@ -304,15 +304,15 @@ def test_against_matrix_implementation():
     realization of noise.
 
     '''
-    c_loaded = np.load('matrix_euler_test_0/coupling_op.npy')
-    MN_arr = np.load('matrix_euler_test_0/M_N.npy')
+    c_loaded = np.load('tests/matrix_euler_test_0/coupling_op.npy')
+    MN_arr = np.load('tests/matrix_euler_test_0/M_N.npy')
     M_loaded = MN_arr[0]
     N_loaded = MN_arr[1]
-    H_loaded = np.load('matrix_euler_test_0/H.npy')
-    times_loaded = np.load('matrix_euler_test_0/times.npy')
-    U1s_loaded = np.load('matrix_euler_test_0/U1s.npy')
-    rho0_loaded = np.load('matrix_euler_test_0/rho_0.npy')
-    rhos_loaded = np.load('matrix_euler_test_0/rhos.npy')
+    H_loaded = np.load('tests/matrix_euler_test_0/H.npy')
+    times_loaded = np.load('tests/matrix_euler_test_0/times.npy')
+    U1s_loaded = np.load('tests/matrix_euler_test_0/U1s.npy')
+    rho0_loaded = np.load('tests/matrix_euler_test_0/rho_0.npy')
+    rhos_loaded = np.load('tests/matrix_euler_test_0/rhos.npy')
 
     test_integrator = integrate.EulerHomodyneIntegrator(c_loaded, M_loaded,
                                                         N_loaded, H_loaded)
