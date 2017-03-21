@@ -7,7 +7,7 @@ requires = [
          ]
 
 setup(name='pysme',
-      version='0.1',
+      version='0.2',
       install_requires=requires,
       # Workaround from
       # https://github.com/numpy/numpy/issues/2434#issuecomment-65252402
