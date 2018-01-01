@@ -1,6 +1,7 @@
 from . import gellmann
 from . import gramschmidt
 from . import grid_conv
+from . import hierarchy
 from . import integrate
 from . import matrix_form
 from . import projector_method
