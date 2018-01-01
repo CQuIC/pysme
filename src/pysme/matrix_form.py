@@ -28,3 +28,6 @@ def euler_integrate(rho_0, rho_dot_fn, times):
         rho_dot = rho_dot_fn(rhos[-1], t)
         rhos.append(rhos[-1] + dt * rho_dot)
     return rhos
+
+def get_expectations(rhos, observable):
+    return np.array([np.trace(observable @ rho).real for rho in rhos])
