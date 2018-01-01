@@ -9,6 +9,21 @@
 import numpy as np
 import pysme.matrix_form as mf
 
+class CompositeState(list):
+    '''Composite state class that supports addition and scalar multiplication
+
+    Useful for using in an euler integration routine.
+
+    '''
+    def __add__(self, other):
+        return CompositeState([self_component + other_component
+                               for self_component, other_component
+                               in zip(self, other)])
+
+    def __rmul__(self, other):
+        return CompositeState([other * self_component
+                               for self_component in self])
+
 def D_non_herm(c, rho_tilde, xi):
     r'''Diffusion-operator-like function for a non-hermitian argument
 
@@ -48,26 +63,27 @@ def rho_dot_conv(rho_combined, c, r, mu, gamma, xi):
     rho_tilde = rho_combined[1]
     rho_tilde_dag = rho_tilde.conjugate().T
     xi_star = xi.conjugate()
-    rho_dot = gamma * (D(c, rho) - np.sinh(r) * np.cosh(r) *
+    rho_dot = gamma * (mf.D(c, rho) - np.sinh(r) * np.cosh(r) *
         (double_comm_non_herm(c_dag, rho_tilde_dag, xi_star, -mu) +
             double_comm_non_herm(c, rho_tilde, xi, mu)) + np.sinh(r)**2 *
         (D_non_herm(c, rho_tilde, xi) +
             D_non_herm(c_dag, rho_tilde_dag, xi_star)))
     rho_tilde_dot = xi * rho
-    return rho_dot, rho_tilde_dot
+    return CompositeState([rho_dot, rho_tilde_dot])
 
 def euler_integrate_conv(rho_0, c, r, mu, gamma, xi_fn, times):
     '''Integrate the convolutionful master equation with Euler integration
 
     '''
-    rho_combined_0 = (rho_0, np.zeros(rho_0.shape, dtype=rho_0.dtype))
+    rho_combined_0 = CompositeState([rho_0,
+                                     np.zeros(rho_0.shape, dtype=rho_0.dtype)])
     return mf.euler_integrate(rho_combined_0,
                               lambda rho_combined, t:
                               rho_dot_conv(rho_combined, c, r, mu, gamma,
                                            xi_fn(t)),
                               times)
 
-def rho_dot_convless(rho_combined, xi_tilde, c, r, mu, gamma, xi):
+def rho_dot_convless(rho_combined, c, r, mu, gamma, xi):
     '''Compute the derivative for the convolutionless master equation
 
     rho_combined = (rho, xi_tilde)
@@ -78,19 +94,19 @@ def rho_dot_convless(rho_combined, xi_tilde, c, r, mu, gamma, xi):
     xi_tilde = rho_combined[1]
     xi_tilde_star = xi_tilde.conjugate()
     xi_star = xi.conjugate()
-    rho_dot = gamma * (D(c, rho) - np.sinh(r) * np.cosh(r) *
+    rho_dot = gamma * (mf.D(c, rho) - np.sinh(r) * np.cosh(r) *
         (double_comm_non_herm(c_dag, xi_tilde_star * rho, xi_star, -mu) +
             double_comm_non_herm(c, xi_tilde * rho, xi, mu)) + np.sinh(r)**2 *
         (D_non_herm(c, xi_tilde * rho, xi) +
             D_non_herm(c_dag, xi_tilde_star * rho, xi_star)))
     xi_tilde_dot = xi
-    return rho_dot, xi_tilde_dot
+    return CompositeState([rho_dot, xi_tilde_dot])
 
 def euler_integrate_convless(rho_0, c, r, mu, gamma, xi_fn, times):
     '''Integrate the convolutionless master equation with Euler integration
 
     '''
-    rho_combined_0 = (rho_0, 0.j)
+    rho_combined_0 = CompositeState([rho_0, 0.j])
     return mf.euler_integrate(rho_combined_0,
                               lambda rho_combined, t:
                               rho_dot_convless(rho_combined, c, r, mu, gamma,
