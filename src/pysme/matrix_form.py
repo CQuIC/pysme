@@ -27,4 +27,4 @@ def euler_integrate(rho_0, rho_dot_fn, times):
     for dt, t in zip(dts, times[:-1]):
         rho_dot = rho_dot_fn(rhos[-1], t)
         rhos.append(rhos[-1] + dt * rho_dot)
-    return np.array(rhos)
+    return rhos
