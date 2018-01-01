@@ -10,7 +10,7 @@ import numpy as np
 import pysme.matrix_form as mf
 
 def D_non_herm(c, rho_tilde, xi):
-	r'''Diffusion-operator-like function for a non-hermitian argument
+    r'''Diffusion-operator-like function for a non-hermitian argument
 
     .. math::
 
@@ -19,14 +19,14 @@ def D_non_herm(c, rho_tilde, xi):
        -c^\dagger c(\xi^*\tilde{\rho})
 
     '''
-	c_dag = c.conjugate().T
+    c_dag = c.conjugate().T
     rho_tilde_dag = c.conjugate().T
     xi_star = xi.conjugate()
     return (c @ (xi * rho_tilde_dag + xi_star * rho_tilde) @ c_dag -
             xi * rho_tilde_dag @ c_dag @ c - xi_star * c_dag @ c @ rho_tilde)
 
 def double_comm_non_herm(c, rho_tilde, xi, mu):
-	r'''Double-commutator-like function for a non-hermitian argument
+    r'''Double-commutator-like function for a non-hermitian argument
 
     .. math::
 
