@@ -9,6 +9,8 @@
 
 import numpy as np
 import pysme.integrate as integ
+import pysme.gellmann as gm
+import pysme.system_builder as sb
 
 def trunc_osc_src_SLH(n_max, E, g):
     '''SLH triple for a number-truncated cavity squeezed light source
@@ -45,8 +47,7 @@ def sqz_trunc_osc_src_SLH(n_max, E, g):
     sinhr = np.sqrt(sinh2r)
     a_sq = coshr * a - np.exp(2.j * mu) * sinhr * a_dag
     L = np.sqrt(g) * a_sq
-    H = -1.j * (E * a_dag @ a_dag - E.conjugate() * a @ a -
-                4 * coshr * sinhr * np.abs(E) * (2 * a_dag @ a + 1)) / 2
+    H = -1.j * (E * a_dag @ a_dag - E.conjugate() * a @ a) / 2
     return {'S': S, 'L': L, 'H': H}
 
 def series_SLH(SLH2, SLH1):
@@ -75,3 +76,32 @@ def make_sqz_trunc_osc_src_integrator(n_max, E, g_cavity, c_sys, H_sys):
                             'L': c_sys, 'H': H_sys},
                            sqz_trunc_osc_src_SLH(n_max, E, g_cavity))
     return integ.UncondGaussIntegrator(total_SLH['L'], 0, 0, total_SLH['H'])
+
+class SqzTruncOscSrcIntegratorFactory():
+    def __init__(self, d_sys, n_max):
+        self.d_sys = d_sys
+        self.n_max = n_max
+        self.d_total = (self.n_max + 1) * self.d_sys
+        self.basis = gm.get_basis(self.d_total)
+        # Only want the parts of common_dict pertaining to the basis setup
+        # (which is time-consuming). Suggests I should split the basis part out
+        # into a separate function (perhaps a basis object).
+        zero_op = np.zeros((self.d_total, self.d_total), dtype=np.complex)
+        self.basis_common_dict = sb.op_calc_setup(zero_op, 0, 0, zero_op,
+                                                  self.basis[:-1])
+
+    def make_integrator(self, c_op, E, g, H):
+        total_SLH = series_SLH({'S': np.eye(c_op.shape[0], dtype=c_op.dtype),
+                                'L': c_op, 'H': H},
+                               sqz_trunc_osc_src_SLH(self.n_max, E, g))
+        c_total = total_SLH['L']
+        H_total = total_SLH['H']
+        common_dict = self.basis_common_dict.copy()
+        common_dict['C_vector'] = sb.vectorize(c_total, common_dict['basis'])
+        common_dict['H_vector'] = sb.vectorize(H_total, common_dict['basis'])
+        D_c = sb.diffusion_op(**common_dict)
+        F = sb.hamiltonian_op(**common_dict)
+        drift_rep = D_c + F
+        return integ.UncondGaussIntegrator(c_total, 0, 0, H_total,
+                                           basis=common_dict['basis'],
+                                           drift_rep=drift_rep)
