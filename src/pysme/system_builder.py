@@ -90,33 +90,45 @@ def dualize(operator, basis):
                                   axes=[[1, 0], [0, 1]])
                      for basis_el in basis])
 
+class Basis:
+    """Stores calculational tools specific to a particular operator basis"""
+    def __init__(self, partial_basis):
+        # Add the identity to the end of the basis to complete it (important for
+        # some tests for the identity to be the last basis element).
+        self.elements = partial_basis + [np.eye(*partial_basis[0].shape)]
+
+        self.dim = len(self.elements)
+
+        self.double_prods = {(i, j): np.dot(self.elements[i], self.elements[j])
+                             for i, j in it.product(range(self.dim), repeat=2)}
+
+        self.triple_prods = {(i, j, k): np.dot(self.elements[i],
+                                               self.double_prods[j, k]) -
+                             0.5 * np.dot(self.elements[k],
+                                          self.double_prods[i, j]) -
+                             0.5 * np.dot(self.elements[j],
+                                          self.double_prods[k, i])
+                             for j, k, i in it.product(range(self.dim),
+                                                       repeat=3)}
+
+        # Square norm of basis elements
+        self.norms_sq = [norm_squared(self.elements[i])
+                         for i in range(self.dim)]
+
 def op_calc_setup(coupling_op, M_sq, N, H, partial_basis):
     """Do repeated tasks performed every time a superoperator is computed."""
 
-    # Add the identity to the end of the basis to complete it (important for
-    # some tests for the identity to be the last basis element).
-    basis = partial_basis + [np.eye(*partial_basis[0].shape)]
-
-    dim = len(basis)
+    basis = Basis(partial_basis)
 
     # Vectorization of the coupling operator
-    C_vector = vectorize(coupling_op, basis)
-    H_vector = vectorize(H, basis)
+    C_vector = vectorize(coupling_op, basis.elements)
+    H_vector = vectorize(H, basis.elements)
 
-    double_prods = {(i, j): np.dot(basis[i], basis[j])
-                    for i, j in it.product(range(dim), repeat=2)}
-
-    triple_prods = {(i, j, k): np.dot(basis[i], double_prods[j, k]) -
-                    0.5 * np.dot(basis[k], double_prods[i, j]) -
-                    0.5 * np.dot(basis[j], double_prods[k, i])
-                    for j, k, i in it.product(range(dim), repeat=3)}
-
-    # Square norm of basis elements
-    basis_norms_sq = [norm_squared(basis[i]) for i in range(dim)]
-
-    return {'dim': dim, 'C_vector': C_vector, 'double_prods': double_prods,
-            'triple_prods': triple_prods, 'basis': basis, 'M_sq': M_sq, 'N': N,
-            'H_vector': H_vector, 'basis_norms_sq': basis_norms_sq}
+    return {'dim': basis.dim, 'C_vector': C_vector,
+            'double_prods': basis.double_prods,
+            'triple_prods': basis.triple_prods, 'basis': basis.elements,
+            'M_sq': M_sq, 'N': N, 'H_vector': H_vector,
+            'basis_norms_sq': basis.norms_sq}
 
 def construct_Q(coupling_op, M_sq, N, H, partial_basis):
     """Construct the linear operator generating unconditional evolution."""
