@@ -6,5 +6,6 @@ from . import integrate
 from . import matrix_form
 from . import projector_method
 from . import sde
+from . import sparse_system_builder
 from . import squeezing_source
 from . import system_builder
