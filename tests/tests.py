@@ -1,10 +1,16 @@
 from nose.tools import assert_almost_equal, assert_equal, assert_true
 import pysme.gellmann as gm
 import pysme.gramschmidt as gs
+import pysme.sparse_system_builder as ssb
 import pysme.system_builder as sb
 import pysme.grid_conv as gc
 import pysme.integrate as integrate
+import pysme.matrix_form as mf
+
 import numpy as np
+import itertools as it
+import sparse
+from sparse import COO
 
 def check_orthogonal(A, B):
     dot_prod = np.sqrt(np.trace(np.dot(A.conj().T, B)))
@@ -329,3 +335,63 @@ def test_against_matrix_implementation():
     error_norms = [sb.norm_squared(test_errors[j])
                    for j in range(test_errors.shape[0])]
     assert_almost_equal(max(error_norms), 0.0, 7)
+
+def check_sparse_vectorization(sparse_basis, ops):
+    for op in ops:
+        op_there_back = sparse_basis.matrize(sparse_basis.vectorize(op))
+        assert_almost_equal(np.abs(op - op_there_back).max(), 0.0, 7)
+
+def check_sparse_duals(sparse_basis, ops):
+    for op1, op2 in it.product(ops, ops):
+        tr = np.trace(op1.conj().T @ op2)
+        ip = np.dot(sparse_basis.dualize(op1), sparse_basis.vectorize(op2))
+        assert_almost_equal(np.abs(tr - ip), 0.0, 7)
+
+def check_sparse_real_sand(sparse_basis, X, rho, Y):
+    x_vec = sparse_basis.vectorize(X)
+    y_vec = sparse_basis.vectorize(Y)
+    rho_vec = sparse_basis.vectorize(rho)
+    dense_real_sand = (X @ rho @ Y.conj().T + Y @ rho @ X.conj().T) / 2
+    real_sand_matrix = sparse_basis.make_real_sand_matrix(x_vec, y_vec)
+    real_sand_vec = COO.from_numpy(real_sand_matrix @ rho_vec.todense())
+    assert_almost_equal(np.abs(dense_real_sand -
+                               sparse_basis.matrize(real_sand_vec)).max(),
+                        0.0, 7)
+
+def check_sparse_real_comm(sparse_basis, X, rho, Y):
+    x_vec = sparse_basis.vectorize(X)
+    y_vec = sparse_basis.vectorize(Y)
+    rho_vec = sparse_basis.vectorize(rho)
+    dense_real_comm = (mf.comm(X @ rho, Y.conj().T) +
+                       mf.comm(Y, rho @ X.conj().T)) / 2
+    real_comm_matrix = sparse_basis.make_real_comm_matrix(x_vec, y_vec)
+    real_comm_vec = COO.from_numpy(real_comm_matrix @ rho_vec.todense())
+    assert_almost_equal(np.abs(dense_real_comm -
+                               sparse_basis.matrize(real_comm_vec)).max(),
+                        0.0, 7)
+
+def check_sparse_hamil_comm(sparse_basis, H, rho):
+    h_vec = sparse_basis.vectorize(H)
+    rho_vec = sparse_basis.vectorize(rho)
+    dense_hamil_comm = -1j * mf.comm(H, rho)
+    hamil_comm_matrix = sparse_basis.make_hamil_comm_matrix(h_vec)
+    hamil_comm_vec = COO.from_numpy(hamil_comm_matrix @ rho_vec.todense())
+    assert_almost_equal(np.abs(dense_hamil_comm -
+                               sparse_basis.matrize(hamil_comm_vec)).max(),
+                        0.0, 7)
+
+def test_sparse_system_builder():
+    d = 30
+    sparse_basis = ssb.SparseBasis(d)
+    rand = np.random.RandomState(212114116)
+    X = rand.standard_normal((d, d)) + 1.j * rand.standard_normal((d, d))
+    Y = rand.standard_normal((d, d)) + 1.j * rand.standard_normal((d, d))
+    rho_temp = rand.standard_normal((d, d)) + 1.j * rand.standard_normal((d, d))
+    rho = rho_temp @ rho_temp.conj().T / np.trace(rho_temp @ rho_temp.conj().T)
+    H_temp = rand.standard_normal((d, d)) + 1.j * rand.standard_normal((d, d))
+    H = (H_temp + H_temp.conj().T) / 2
+    check_sparse_vectorization(sparse_basis, [X, Y, rho, H])
+    check_sparse_duals(sparse_basis, [X, Y, rho, H])
+    check_sparse_real_sand(sparse_basis, X, rho, Y)
+    check_sparse_real_comm(sparse_basis, X, rho, Y)
+    check_sparse_hamil_comm(sparse_basis, H, rho)
