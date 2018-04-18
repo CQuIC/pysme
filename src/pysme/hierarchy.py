@@ -10,6 +10,7 @@ import numpy as np
 from scipy.integrate import odeint
 import pysme.matrix_form as mf
 import pysme.system_builder as sb
+import pysme.sparse_system_builder as ssb
 import pysme.integrate as integ
 import pysme.gellmann as gm
 
@@ -67,48 +68,48 @@ class HierarchyIntegratorFactory():
         self.d_sys = d_sys
         self.n_max = n_max
         self.d_total = (self.n_max + 1) * self.d_sys
-        self.basis = gm.get_basis(self.d_total)
-        # Only want the parts of common_dict pertaining to the basis setup
-        # (which is time-consuming). Suggests I should split the basis part out
-        # into a separate function (perhaps a basis object).
-        zero_op = np.zeros((self.d_total, self.d_total), dtype=np.complex)
-        self.basis_common_dict = sb.op_calc_setup(zero_op, 0, 0, zero_op,
-                                                  self.basis[:-1])
+        self.sparse_basis = ssb.SparseBasis(self.d_total)
         self.A = np.zeros((self.n_max + 1, self.n_max + 1),
                           dtype=np.complex)
         for n in range(n_max):
             self.A[n, n+1] = np.sqrt(n + 1)
 
-    def drift_rep(self, c_tot, Asq_pl, xi_t, S, H):
-# This common_dict solution is really proving to be annoying to build upon...
-        common_dict = self.basis_common_dict.copy()
-        c_1 = c_tot + xi_t * np.kron(S, Asq_pl)
-        common_dict['C_vector'] = sb.vectorize(c_1, common_dict['basis'])
-        D_1 = sb.diffusion_op(**common_dict)
-        c_2 = np.kron(np.eye(self.d_sys), Asq_pl)
-        common_dict['C_vector'] = sb.vectorize(c_2, common_dict['basis'])
-        D_2 = np.abs(xi_t)**2 * sb.diffusion_op(**common_dict)
-        h_tot = np.kron(H, np.eye(self.n_max + 1))
-        common_dict['H_vector'] = sb.vectorize(h_tot, common_dict['basis'])
-        F = sb.hamiltonian_op(**common_dict)
-        return D_1 - D_2 + F
+    def make_integrator(self, xi_fn, S, L, H, r, mu):
+        return WavepacketUncondIntegrator(self.sparse_basis, self.n_max,
+                                          self.A, xi_fn, S, L, H, r, mu)
 
-    def make_integrator(self, c_op, r, mu, xi_fn, S, H):
-        c_tot = np.kron(c_op, np.eye(self.n_max + 1))
-        Asq_pl = np.cosh(r) * self.A.T - np.sinh(r) * np.exp(2.j * mu) * self.A
-        drift_rep_fn = lambda t: self.drift_rep(c_tot, Asq_pl, xi_fn(t), S, H)
-        return WavepacketIntegrator(drift_rep_fn,
-                                    self.basis_common_dict['basis'],
-                                    self.n_max)
-
-class WavepacketIntegrator:
-    def __init__(self, drift_rep_fn, basis, n_max):
-        self.Dfun = drift_rep_fn
-        self.basis = basis
+class WavepacketUncondIntegrator:
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu):
+        self.basis = sparse_basis.basis.todense()
         self.n_max = n_max
+        self.xi_fn = xi_fn
+
+        I_hier = np.eye(n_max + 1, dtype=np.complex)
+        L_vec = sparse_basis.vectorize(np.kron(L, I_hier))
+        DL = sparse_basis.make_diff_op_matrix(L_vec)
+        H_vec = sparse_basis.vectorize(np.kron(H, I_hier))
+        Hcomm = sparse_basis.make_hamil_comm_matrix(H_vec)
+        self.wp_ind = DL + Hcomm
+
+        Asq_pl = np.cosh(r) * A.conj().T - np.sinh(r) * np.exp(2.j*mu) * A
+        SA_vec = sparse_basis.vectorize(np.kron(S, Asq_pl))
+        self.wp_re = 2 * sparse_basis.make_real_comm_matrix(SA_vec, L_vec)
+        self.wp_im = 2 * sparse_basis.make_real_comm_matrix(1.j*SA_vec, L_vec)
+
+        I_sys = np.eye(S.shape[0], dtype=np.complex)
+        Asq_pl_vec = sparse_basis.vectorize(np.kron(I_sys, Asq_pl))
+        S_vec = sparse_basis.vectorize(np.kron(S, I_hier))
+        Asand = sparse_basis.make_real_sand_matrix(Asq_pl_vec, Asq_pl_vec)
+        DS = sparse_basis.make_diff_op_matrix(S_vec)
+        self.wp_abs = DS.dot(Asand)
 
     def a_fn(self, rho, t):
         return np.dot(self.Dfun(t), rho)
+
+    def Dfun(self, t):
+        xi_t = self.xi_fn(t)
+        return (self.wp_ind + xi_t.real * self.wp_re + xi_t.imag * self.wp_im +
+                np.abs(xi_t)**2 * self.wp_abs)
 
     def integrate(self, rho_0, times):
         r"""Integrate the equation for a list of times with given initial
