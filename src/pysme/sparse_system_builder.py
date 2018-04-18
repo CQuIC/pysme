@@ -79,7 +79,7 @@ class SparseBasis:
                                 ([0], [1])))
         if type(result) == sparse.coo.COO:
             result = result.todense()
-        return result
+        return result.real
 
     def make_real_comm_matrix(self, x, y):
         r"""Make the superoperator matrix representation of
@@ -108,7 +108,7 @@ class SparseBasis:
                                     ([0], [1])))
         if type(result) == sparse.coo.COO:
             result = result.todense()
-        return result
+        return result.real
 
     def make_diff_op_matrix(self, x):
         """Make the superoperator matrix representation of
@@ -139,4 +139,4 @@ class SparseBasis:
         result = 2 * sparse.tensordot(struct_imag, h, ([0], [0])).T
         if type(result) == sparse.coo.COO:
             result = result.todense()
-        return result
+        return result.real
