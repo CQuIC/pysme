@@ -71,12 +71,15 @@ class SparseBasis:
         should be aware of that.
 
         """
-        return sparse_real(sparse.tensordot(
+        result = sparse_real(sparse.tensordot(
                                 sparse.tensordot(x, self.struct,
                                                  ([0], [0])),
                                 sparse.tensordot(np.conj(y), self.struct,
                                                  ([0], [1])),
                                 ([0], [1])))
+        if type(result) == sparse.coo.COO:
+            result = result.todense()
+        return result
 
     def make_real_comm_matrix(self, x, y):
         r"""Make the superoperator matrix representation of
@@ -97,12 +100,15 @@ class SparseBasis:
 
         """
         struct_imag = sparse_imag(self.struct)
-        return -2 * sparse_imag(sparse.tensordot(
+        result = -2 * sparse_imag(sparse.tensordot(
                                     sparse.tensordot(np.conj(y), struct_imag,
                                                      ([0], [1])),
                                     sparse.tensordot(x, self.struct,
                                                      ([0], [0])),
                                     ([0], [1])))
+        if type(result) == sparse.coo.COO:
+            result = result.todense()
+        return result
 
     def make_diff_op_matrix(self, x):
         """Make the superoperator matrix representation of
@@ -126,9 +132,11 @@ class SparseBasis:
         h is the vectorized representation of the Hamiltonian H stored in sparse
         format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        Returns a dense matrix.
 
         """
         struct_imag = sparse_imag(self.struct)
-        return 2 * sparse.tensordot(struct_imag, h, ([0], [0])).T
+        result = 2 * sparse.tensordot(struct_imag, h, ([0], [0])).T
+        if type(result) == sparse.coo.COO:
+            result = result.todense()
+        return result
