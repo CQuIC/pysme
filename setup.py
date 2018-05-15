@@ -2,7 +2,7 @@ from setuptools import setup
 
 requires = [
         'Cython',
-        'numpy',
+        'numpy >= 1.13',
         'scipy',
         'sparse',
          ]
