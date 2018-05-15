@@ -4,7 +4,7 @@ branches:
   - develop
 language: python
 python:
-  - "3.4"
+  - "3.5"
 # Install C libraries
 addons:
   apt:
