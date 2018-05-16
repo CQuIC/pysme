@@ -13,6 +13,7 @@ import pysme.system_builder as sb
 import pysme.sparse_system_builder as ssb
 import pysme.integrate as integ
 import pysme.gellmann as gm
+import pysme.sde as sde
 
 class HierarchyState(list):
     '''Hierarchy state class that supports addition and scalar multiplication
@@ -85,19 +86,21 @@ class WavepacketUncondIntegrator:
         self.xi_fn = xi_fn
 
         I_hier = np.eye(n_max + 1, dtype=np.complex)
-        L_vec = sparse_basis.vectorize(np.kron(L, I_hier))
-        DL = sparse_basis.make_diff_op_matrix(L_vec)
+        self.L_vec = sparse_basis.vectorize(np.kron(L, I_hier))
+        DL = sparse_basis.make_diff_op_matrix(self.L_vec)
         H_vec = sparse_basis.vectorize(np.kron(H, I_hier))
         Hcomm = sparse_basis.make_hamil_comm_matrix(H_vec)
         self.wp_ind = DL + Hcomm
 
         Asq_pl = np.cosh(r) * A.conj().T - np.sinh(r) * np.exp(2.j*mu) * A
-        SA_vec = sparse_basis.vectorize(np.kron(S, Asq_pl))
-        self.wp_re = 2 * sparse_basis.make_real_comm_matrix(SA_vec, L_vec)
-        self.wp_im = 2 * sparse_basis.make_real_comm_matrix(1.j*SA_vec, L_vec)
+        self.SA_vec = sparse_basis.vectorize(np.kron(S, Asq_pl))
+        self.wp_re = 2 * sparse_basis.make_real_comm_matrix(self.SA_vec,
+                                                            self.L_vec)
+        self.wp_im = 2 * sparse_basis.make_real_comm_matrix(1.j * self.SA_vec,
+                                                            self.L_vec)
 
-        I_sys = np.eye(S.shape[0], dtype=np.complex)
-        Asq_pl_vec = sparse_basis.vectorize(np.kron(I_sys, Asq_pl))
+        self.I_sys = np.eye(S.shape[0], dtype=np.complex)
+        Asq_pl_vec = sparse_basis.vectorize(np.kron(self.I_sys, Asq_pl))
         S_vec = sparse_basis.vectorize(np.kron(S, I_hier))
         Asand = sparse_basis.make_real_sand_matrix(Asq_pl_vec, Asq_pl_vec)
         DS = sparse_basis.make_diff_op_matrix(S_vec)
@@ -127,4 +130,39 @@ class WavepacketUncondIntegrator:
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
                                  self.basis).real
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
+        return integ.Solution(vec_soln, self.basis)
+
+class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+                 hom_ang=0, field_state=None):
+        super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
+        self.G_ind = sparse_basis.make_wiener_linear_matrix(
+                                    np.exp(-1.j * hom_ang) * self.L_vec)
+        self.G_re = sparse_basis.make_wiener_linear_matrix(
+                                    np.exp(-1.j * hom_ang) * self.SA_vec)
+        self.G_im = sparse_basis.make_wiener_linear_matrix(
+                                    1.j * np.exp(-1.j * hom_ang) * self.SA_vec)
+        if field_state is None:
+            # If not specified, set initial field state to squeezed vacuum
+            field_state = np.zeros(self.n_max + 1, dtype=np.complex)
+            field_state[0] = 1
+        field_state_proj = np.outer(field_state, field_state.conjugate())
+        field_state_proj /= np.trace(field_state_proj).real
+        trace_dual = sparse_basis.dualize(np.kron(self.I_sys, field_state_proj))
+        self.k_ind = -trace_dual @ self.G_ind
+        self.k_re = -trace_dual @ self.G_re
+        self.k_im = -trace_dual @ self.G_im
+
+    def b_fn(self, rho, t):
+        xi_t = self.xi_fn(t)
+        k_t = self.k_ind + xi_t.real * self.k_re + xi_t.imag * self.k_im
+        G_t = self.G_ind + xi_t.real * self.G_re + xi_t.imag * self.G_im
+        return (k_t @ rho) * rho + G_t @ rho
+
+    def integrate(self, rho_0, times, U1s=None):
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+                                 self.basis).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+        vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
         return integ.Solution(vec_soln, self.basis)

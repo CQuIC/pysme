@@ -140,3 +140,7 @@ class SparseBasis:
         if type(result) == sparse.coo.COO:
             result = result.todense()
         return result.real
+
+    def make_wiener_linear_matrix(self, x):
+        Id_vec = self.vectorize(np.eye(self.dim))
+        return 2 * self.make_real_sand_matrix(x, Id_vec)
