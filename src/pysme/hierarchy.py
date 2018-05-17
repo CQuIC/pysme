@@ -169,7 +169,7 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
                                  self.basis).real
         if U1s is None:
-            U1s = np.random.randn(len(times) -1)
+            U1s = np.random.randn(len(times) - 1)
         vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
         return integ.Solution(vec_soln, self.basis)
 
@@ -214,8 +214,60 @@ class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
                                  self.basis).real
         if U1s is None:
-            U1s = np.random.randn(len(times) -1)
+            U1s = np.random.randn(len(times) - 1)
 
         vec_soln = sde.milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
                                 times, U1s)
+        return integ.Solution(vec_soln, self.basis)
+
+class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+                 field_state=None):
+        super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
+        self.G_ind = sparse_basis.make_real_sand_matrix(self.L_vec, self.L_vec)
+        self.G_re = 2 * sparse_basis.make_real_sand_matrix(self.L_vec,
+                                                           self.SA_vec)
+        self.G_im = 2 * sparse_basis.make_real_sand_matrix(self.L_vec,
+                                                           1.j * self.SA_vec)
+        self.G_abs = sparse_basis.make_real_sand_matrix(self.SA_vec,
+                                                        self.SA_vec)
+        if field_state is None:
+            # If not specified, set initial field state to squeezed vacuum
+            field_state = np.zeros(self.n_max + 1, dtype=np.complex)
+            field_state[0] = 1
+        field_state_proj = np.outer(field_state, field_state.conjugate())
+        field_state_proj /= np.trace(field_state_proj).real
+        trace_dual = sparse_basis.dualize(np.kron(self.I_sys, field_state_proj))
+        self.k_T_ind = trace_dual @ self.G_ind
+        self.k_T_re = trace_dual @ self.G_re
+        self.k_T_im = trace_dual @ self.G_im
+        self.k_T_abs = trace_dual @ self.G_abs
+
+    def k_T_t_fn(self, xi_t):
+        return (self.k_T_ind + xi_t.real * self.k_T_re +
+                xi_t.imag * self.k_T_im + np.abs(xi_t)**2 * self.k_T_abs)
+
+    def G_t_fn(self, xi_t):
+        return (self.G_ind + xi_t.real * self.G_re + xi_t.imag * self.G_im
+                + np.abs(xi_t)**2 * self.G_abs)
+
+    def innov_coeff_fn(self, rho, t):
+        xi_t = self.xi_fn(t)
+        k_T_t = self.k_T_t_fn(xi_t)
+        G_t = self.G_t_fn(xi_t)
+        return G_t @ rho / (k_T_t @ rho) - rho
+
+    def jump_rate_fn(self, rho, t):
+        xi_t = self.xi_fn(t)
+        k_T_t = self.k_T_t_fn(xi_t)
+        return k_T_t @ rho
+
+    def integrate(self, rho_0, times, Us):
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+                                 self.basis).real
+        if Us is None:
+            Us = np.random.uniform(size=len(times) - 1)
+
+        vec_soln = sde.jump_euler(self.a_fn, self.innov_coeff_fn,
+                                  self.jump_rate_fn, rho_0_vec, times, Us)
         return integ.Solution(vec_soln, self.basis)

@@ -8,6 +8,61 @@
 
 import numpy as np
 
+def jump_euler(drift_fn, innov_coeff_fn, jump_rate_fn, X0, ts, Us):
+    r"""Integrate a system of ordinary stochastic differential equations subject
+    to scalar poisson noise:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,d\mathcal{J}_t
+
+    Uses the Euler method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta \mathcal{J}_i
+
+    where :math:`\Delta \mathcal{J}_i=\Theta(\mathbb{E}[\Delta N_i]-U_i)
+    -\mathcc{E}[\Delta N_i]`, :math:`U_i` being a uniformly
+    distributed random variable on the interval :math:`[0,1]` and
+    :math:`\mathbb{E}[\Delta N_i]` being the jump rate times
+    :math:`\Delta t_i`.
+
+    Parameters
+    ----------
+    drift_fn : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    innov_coeff_fn : callable(X, t)
+        Computes the innovation coefficient :math:`\vec{b}(\vec{X},t)`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : array, shape=(len(t) - 1)
+        Samples from a uniform :math:`[0,1]` random variable for each time step.
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+
+    X = np.array([X0])
+
+    for t, dt, U in zip(ts[:-1], dts, Us):
+        EdN = jump_rate_fn(X[-1], t) * dt
+        dN = 0 if U > EdN else 1
+        dX = drift_fn(X[-1], t) * dt + innov_coeff_fn(X[-1], t) * (dN - EdN)
+        X = np.vstack((X, X[-1] + dX))
+
+    return X
+
 def euler(drift_fn, diffusion_fn, X0, ts, Us):
     r"""Integrate a system of ordinary stochastic differential equations subject
     to scalar noise:
