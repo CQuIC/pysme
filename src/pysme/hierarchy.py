@@ -172,3 +172,50 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
             U1s = np.random.randn(len(times) -1)
         vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
         return integ.Solution(vec_soln, self.basis)
+
+class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+                 hom_ang=0, field_state=None):
+        super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+                         hom_ang, field_state)
+        self.G2_ind = self.G_ind @ self.G_ind
+        self.G2_re = self.G_re @ self.G_ind + self.G_ind @ self.G_re
+        self.G2_im = self.G_im @ self.G_ind + self.G_ind @ self.G_im
+        self.G2_reim = self.G_re @ self.G_im + self.G_im @ self.G_re
+        self.G2_re2 = self.G_re @ self.G_re
+        self.G2_im2 = self.G_im @ self.G_im
+        self.k_T_G_ind = self.k_T_ind @ self.G_ind
+        self.k_T_G_re = self.k_T_re @ self.G_ind + self.k_T_ind @ self.G_re
+        self.k_T_G_im = self.k_T_im @ self.G_ind + self.k_T_ind @ self.G_im
+        self.k_T_G_reim = self.k_T_re @ self.G_im + self.k_T_im @ self.G_re
+        self.k_T_G_re2 = self.k_T_re @ self.G_re
+        self.k_T_G_im2 = self.k_T_im @ self.G_im
+
+    def G2_t_fn(self, xi_t):
+        return (self.G2_ind + xi_t.real * self.G2_re + xi_t.imag * self.G2_im +
+                xi_t.imag * xi_t.real * self.G2_reim +
+                xi_t.real**2 * self.G2_re2 + xi_t.imag**2 * self.G2_im2)
+
+    def k_T_G_t_fn(self, xi_t):
+        return (self.k_T_G_ind + xi_t.real * self.k_T_G_re +
+                xi_t.imag * self.k_T_G_im +
+                xi_t.imag * xi_t.real * self.k_T_G_reim +
+                xi_t.real**2 * self.k_T_G_re2 + xi_t.imag**2 * self.k_T_G_im2)
+
+    def b_dx_b_fn(self, rho, t):
+        xi_t = self.xi_fn(t)
+        k_T_t = self.k_T_t_fn(xi_t)
+        G_t = self.G_t_fn(xi_t)
+        G2_t = self.G2_t_fn(xi_t)
+        k_T_G_t = self.k_T_G_t_fn(xi_t)
+        return integ.b_dx_b(G2_t, k_T_G_t, G_t, k_T_t, rho)
+
+    def integrate(self, rho_0, times, U1s=None):
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+                                 self.basis).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
+                                times, U1s)
+        return integ.Solution(vec_soln, self.basis)
