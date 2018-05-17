@@ -149,15 +149,21 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
         field_state_proj = np.outer(field_state, field_state.conjugate())
         field_state_proj /= np.trace(field_state_proj).real
         trace_dual = sparse_basis.dualize(np.kron(self.I_sys, field_state_proj))
-        self.k_ind = -trace_dual @ self.G_ind
-        self.k_re = -trace_dual @ self.G_re
-        self.k_im = -trace_dual @ self.G_im
+        self.k_T_ind = -trace_dual @ self.G_ind
+        self.k_T_re = -trace_dual @ self.G_re
+        self.k_T_im = -trace_dual @ self.G_im
+
+    def k_T_t_fn(self, xi_t):
+        return self.k_T_ind + xi_t.real * self.k_T_re + xi_t.imag * self.k_T_im
+
+    def G_t_fn(self, xi_t):
+        return self.G_ind + xi_t.real * self.G_re + xi_t.imag * self.G_im
 
     def b_fn(self, rho, t):
         xi_t = self.xi_fn(t)
-        k_t = self.k_ind + xi_t.real * self.k_re + xi_t.imag * self.k_im
-        G_t = self.G_ind + xi_t.real * self.G_re + xi_t.imag * self.G_im
-        return (k_t @ rho) * rho + G_t @ rho
+        k_T_t = self.k_T_t_fn(xi_t)
+        G_t = self.G_t_fn(xi_t)
+        return (k_T_t @ rho) * rho + G_t @ rho
 
     def integrate(self, rho_0, times, U1s=None):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
