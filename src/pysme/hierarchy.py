@@ -305,7 +305,7 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         k_T_t = self.k_T_t_fn(xi_t)
         return k_T_t @ rho
 
-    def integrate(self, rho_0, times, Us):
+    def integrate(self, rho_0, times, Us=None, return_meas_rec=False):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
                                                        dtype=np.complex)),
                                  self.basis).real
@@ -313,5 +313,10 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
             Us = np.random.uniform(size=len(times) - 1)
 
         vec_soln = sde.jump_euler(self.no_jump_fn, self.jump_fn,
-                                  self.jump_rate_fn, rho_0_vec, times, Us)
+                                  self.jump_rate_fn, rho_0_vec, times, Us,
+                                  return_dNs=return_meas_rec)
+        if return_meas_rec:
+            vec_soln, dNs = vec_soln
+            return integ.Solution(vec_soln, self.basis), dNs
+
         return integ.Solution(vec_soln, self.basis)

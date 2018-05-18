@@ -8,7 +8,7 @@
 
 import numpy as np
 
-def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us):
+def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us, return_dNs=False):
     r"""Integrate a system of ordinary stochastic differential equations subject
     to scalar poisson noise:
 
@@ -50,16 +50,26 @@ def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us):
 
     dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
 
+    if return_dNs:
+        dNs = []
+
     X = np.array([X0])
 
     for t, dt, U in zip(ts[:-1], dts, Us):
         EdN = jump_rate_fn(X[-1], t) * dt
         if U > EdN:
             X = np.vstack((X, X[-1] + no_jump_fn(X[-1], t) * dt))
+            if return_dNs:
+                dNs.append(0)
         else:
             X = np.vstack((X, jump_fn(X[-1], t)))
+            if return_dNs:
+                dNs.append(1)
 
-    return X
+    if return_dNs:
+        return X, np.array(dNs)
+    else:
+        return X
 
 def euler(drift_fn, diffusion_fn, X0, ts, Us):
     r"""Integrate a system of ordinary stochastic differential equations subject
