@@ -8,33 +8,30 @@
 
 import numpy as np
 
-def jump_euler(drift_fn, innov_coeff_fn, jump_rate_fn, X0, ts, Us):
+def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us):
     r"""Integrate a system of ordinary stochastic differential equations subject
     to scalar poisson noise:
 
     .. math::
 
-       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,d\mathcal{J}_t
+       d\vec{X}=\vec{a}(\vec{X},t)\,(1-dN_t)dt+\vec{b}(\vec{X},t)\,dN_t
 
     Uses the Euler method:
 
     .. math::
 
-       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
-       \vec{b}(\vec{X}_i,t_i)\Delta \mathcal{J}_i
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)(1-\Delta N_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta N_i
 
-    where :math:`\Delta \mathcal{J}_i=\Theta(\mathbb{E}[\Delta N_i]-U_i)
-    -\mathcc{E}[\Delta N_i]`, :math:`U_i` being a uniformly
-    distributed random variable on the interval :math:`[0,1]` and
-    :math:`\mathbb{E}[\Delta N_i]` being the jump rate times
-    :math:`\Delta t_i`.
+    where :math:`\Delta N_i` is a binary :math:`\{0,1\}` random variable with
+    the probability for 1 given by the jump rate times :math:`\Delta t_i`.
 
     Parameters
     ----------
-    drift_fn : callable(X, t)
+    no_jump_fn : callable(X, t)
         Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
-    innov_coeff_fn : callable(X, t)
-        Computes the innovation coefficient :math:`\vec{b}(\vec{X},t)`
+    jump_fn : callable(X, t)
+        Computes the jump coefficient :math:`\vec{b}(\vec{X},t)`
     X0 : numpy.array
         Initial condition on X
     ts : numpy.array
@@ -57,9 +54,10 @@ def jump_euler(drift_fn, innov_coeff_fn, jump_rate_fn, X0, ts, Us):
 
     for t, dt, U in zip(ts[:-1], dts, Us):
         EdN = jump_rate_fn(X[-1], t) * dt
-        dN = 0 if U > EdN else 1
-        dX = drift_fn(X[-1], t) * dt + innov_coeff_fn(X[-1], t) * (dN - EdN)
-        X = np.vstack((X, X[-1] + dX))
+        if U > EdN:
+            X = np.vstack((X, X[-1] + no_jump_fn(X[-1], t) * dt))
+        else:
+            X = np.vstack((X, jump_fn(X[-1], t)))
 
     return X
 

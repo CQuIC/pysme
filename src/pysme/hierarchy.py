@@ -92,19 +92,19 @@ class WavepacketUncondIntegrator:
         Hcomm = sparse_basis.make_hamil_comm_matrix(H_vec)
         self.wp_ind = DL + Hcomm
 
-        Asq_pl = np.cosh(r) * A.conj().T - np.sinh(r) * np.exp(2.j*mu) * A
-        self.SA_vec = sparse_basis.vectorize(np.kron(S, Asq_pl))
+        self.Asq_pl = np.cosh(r) * A.conj().T - np.sinh(r) * np.exp(2.j*mu) * A
+        self.SA_vec = sparse_basis.vectorize(np.kron(S, self.Asq_pl))
         self.wp_re = 2 * sparse_basis.make_real_comm_matrix(self.SA_vec,
                                                             self.L_vec)
         self.wp_im = 2 * sparse_basis.make_real_comm_matrix(1.j * self.SA_vec,
                                                             self.L_vec)
 
         self.I_sys = np.eye(S.shape[0], dtype=np.complex)
-        Asq_pl_vec = sparse_basis.vectorize(np.kron(self.I_sys, Asq_pl))
+        Asq_pl_vec = sparse_basis.vectorize(np.kron(self.I_sys, self.Asq_pl))
         S_vec = sparse_basis.vectorize(np.kron(S, I_hier))
-        Asand = sparse_basis.make_real_sand_matrix(Asq_pl_vec, Asq_pl_vec)
+        self.Asand = sparse_basis.make_real_sand_matrix(Asq_pl_vec, Asq_pl_vec)
         DS = sparse_basis.make_diff_op_matrix(S_vec)
-        self.wp_abs = DS.dot(Asand)
+        self.wp_abs = DS.dot(self.Asand)
 
     def a_fn(self, rho, t):
         return np.dot(self.Dfun(t), rho)
@@ -224,6 +224,14 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
                  field_state=None):
         super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
+        # Operators for the no-jump differential update
+        self.F_ind = (self.wp_ind - sparse_basis.make_real_sand_matrix(
+                                                        self.L_vec, self.L_vec))
+        LSA_vec = sparse_basis.vectorize(np.kron(L.conj().T @ S, self.Asq_pl))
+        self.F_re = -sparse_basis.make_wiener_linear_matrix(LSA_vec)
+        self.F_im = -sparse_basis.make_wiener_linear_matrix(1.j * LSA_vec)
+        self.F_abs = -self.Asand
+        # Operators for the jump update
         self.G_ind = sparse_basis.make_real_sand_matrix(self.L_vec, self.L_vec)
         self.G_re = 2 * sparse_basis.make_real_sand_matrix(self.L_vec,
                                                            self.SA_vec)
@@ -231,6 +239,7 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
                                                            1.j * self.SA_vec)
         self.G_abs = sparse_basis.make_real_sand_matrix(self.SA_vec,
                                                         self.SA_vec)
+        # The functionals giving the jump rate
         if field_state is None:
             # If not specified, set initial field state to squeezed vacuum
             field_state = np.zeros(self.n_max + 1, dtype=np.complex)
@@ -243,19 +252,29 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         self.k_T_im = trace_dual @ self.G_im
         self.k_T_abs = trace_dual @ self.G_abs
 
-    def k_T_t_fn(self, xi_t):
-        return (self.k_T_ind + xi_t.real * self.k_T_re +
-                xi_t.imag * self.k_T_im + np.abs(xi_t)**2 * self.k_T_abs)
+    def F_t_fn(self, xi_t):
+        return (self.F_ind + xi_t.real * self.F_re + xi_t.imag * self.F_im
+                + np.abs(xi_t)**2 * self.F_abs)
 
     def G_t_fn(self, xi_t):
         return (self.G_ind + xi_t.real * self.G_re + xi_t.imag * self.G_im
                 + np.abs(xi_t)**2 * self.G_abs)
 
-    def innov_coeff_fn(self, rho, t):
+    def k_T_t_fn(self, xi_t):
+        return (self.k_T_ind + xi_t.real * self.k_T_re +
+                xi_t.imag * self.k_T_im + np.abs(xi_t)**2 * self.k_T_abs)
+
+    def no_jump_fn(self, rho, t):
+        xi_t = self.xi_fn(t)
+        k_T_t = self.k_T_t_fn(xi_t)
+        F_t = self.F_t_fn(xi_t)
+        return F_t @ rho + (k_T_t @ rho) * rho
+
+    def jump_fn(self, rho, t):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         G_t = self.G_t_fn(xi_t)
-        return G_t @ rho / (k_T_t @ rho) - rho
+        return G_t @ rho / (k_T_t @ rho)
 
     def jump_rate_fn(self, rho, t):
         xi_t = self.xi_fn(t)
@@ -268,6 +287,6 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         if Us is None:
             Us = np.random.uniform(size=len(times) - 1)
 
-        vec_soln = sde.jump_euler(self.a_fn, self.innov_coeff_fn,
+        vec_soln = sde.jump_euler(self.no_jump_fn, self.jump_fn,
                                   self.jump_rate_fn, rho_0_vec, times, Us)
         return integ.Solution(vec_soln, self.basis)
