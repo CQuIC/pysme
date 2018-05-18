@@ -146,7 +146,8 @@ class WavepacketUncondIntegrator:
         :rtype:         `Solution`
 
         """
-        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
+                                                       dtype=np.complex)),
                                  self.basis).real
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return integ.Solution(vec_soln, self.basis)
@@ -185,7 +186,8 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
         return (k_T_t @ rho) * rho + G_t @ rho
 
     def integrate(self, rho_0, times, U1s=None):
-        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
+                                                       dtype=np.complex)),
                                  self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) - 1)
@@ -230,7 +232,8 @@ class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
         return integ.b_dx_b(G2_t, k_T_G_t, G_t, k_T_t, rho)
 
     def integrate(self, rho_0, times, U1s=None):
-        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
+                                                       dtype=np.complex)),
                                  self.basis).real
         if U1s is None:
             U1s = np.random.randn(len(times) - 1)
@@ -301,7 +304,8 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         return k_T_t @ rho
 
     def integrate(self, rho_0, times, Us):
-        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1)),
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
+                                                       dtype=np.complex)),
                                  self.basis).real
         if Us is None:
             Us = np.random.uniform(size=len(times) - 1)
