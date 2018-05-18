@@ -75,12 +75,31 @@ class HierarchyIntegratorFactory():
         for n in range(n_max):
             self.A[n, n+1] = np.sqrt(n + 1)
 
-    def make_integrator(self, xi_fn, S, L, H, r, mu):
+    def make_uncond_integrator(self, xi_fn, S, L, H, r, mu):
         return WavepacketUncondIntegrator(self.sparse_basis, self.n_max,
                                           self.A, xi_fn, S, L, H, r, mu)
 
+    def make_euler_hom_integrator(self, xi_fn, S, L, H, r=0, mu=0, hom_ang=0,
+                                  field_state=None):
+        return EulerWavepacketHomodyneIntegrator(self.sparse_basis, self.n_max,
+                                                 self.A, xi_fn, S, L, H, r, mu,
+                                                 hom_ang, field_state)
+
+    def make_milstein_hom_integrator(self, xi_fn, S, L, H, r=0, mu=0, hom_ang=0,
+                                     field_state=None):
+        return MilsteinWavepacketHomodyneIntegrator(self.sparse_basis,
+                                                    self.n_max, self.A, xi_fn,
+                                                    S, L, H, r, mu, hom_ang,
+                                                    field_state)
+
+    def make_euler_jump_integrator(self, xi_fn, S, L, H, r=0, mu=0,
+                                   field_state=None):
+        return EulerWavepacketJumpIntegrator(self.sparse_basis, self.n_max,
+                                             self.A, xi_fn, S, L, H, r, mu,
+                                             field_state)
+
 class WavepacketUncondIntegrator:
-    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu):
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0):
         self.basis = sparse_basis.basis.todense()
         self.n_max = n_max
         self.xi_fn = xi_fn
@@ -133,7 +152,7 @@ class WavepacketUncondIntegrator:
         return integ.Solution(vec_soln, self.basis)
 
 class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
-    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
                  hom_ang=0, field_state=None):
         super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
         self.G_ind = sparse_basis.make_wiener_linear_matrix(
@@ -174,7 +193,7 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
         return integ.Solution(vec_soln, self.basis)
 
 class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
-    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
                  hom_ang=0, field_state=None):
         super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
                          hom_ang, field_state)
@@ -221,7 +240,7 @@ class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
         return integ.Solution(vec_soln, self.basis)
 
 class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
-    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r, mu,
+    def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
                  field_state=None):
         super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
         # Operators for the no-jump differential update
