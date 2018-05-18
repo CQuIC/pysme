@@ -168,7 +168,8 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
             field_state[0] = 1
         field_state_proj = np.outer(field_state, field_state.conjugate())
         field_state_proj /= np.trace(field_state_proj).real
-        trace_dual = sparse_basis.dualize(np.kron(self.I_sys, field_state_proj))
+        trace_dual = np.real(sparse_basis.dualize(np.kron(self.I_sys,
+                                                          field_state_proj)))
         self.k_T_ind = -trace_dual @ self.G_ind
         self.k_T_re = -trace_dual @ self.G_re
         self.k_T_im = -trace_dual @ self.G_im
@@ -268,7 +269,8 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
             field_state[0] = 1
         field_state_proj = np.outer(field_state, field_state.conjugate())
         field_state_proj /= np.trace(field_state_proj).real
-        trace_dual = sparse_basis.dualize(np.kron(self.I_sys, field_state_proj))
+        trace_dual = np.real(sparse_basis.dualize(np.kron(self.I_sys,
+                                                          field_state_proj)))
         self.k_T_ind = trace_dual @ self.G_ind
         self.k_T_re = trace_dual @ self.G_re
         self.k_T_im = trace_dual @ self.G_im
