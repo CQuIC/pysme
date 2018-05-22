@@ -6,6 +6,7 @@ import pysme.system_builder as sb
 import pysme.grid_conv as gc
 import pysme.integrate as integrate
 import pysme.matrix_form as mf
+import pysme.hierarchy as hier
 
 import numpy as np
 import itertools as it
@@ -380,6 +381,27 @@ def check_sparse_hamil_comm(sparse_basis, H, rho):
                                sparse_basis.matrize(hamil_comm_vec)).max(),
                         0.0, 7)
 
+def check_trivial_construction():
+    # Build some trivial integrators to make sure this edge case is handled
+    # appropriately (in the past such a small factory resulted in dense arrays
+    # that broke sparse.tensordot).
+    Id_triv = np.eye(1, dtype=np.complex)
+    zero_triv = np.zeros((1, 1), dtype=np.complex)
+    S = Id_triv
+    L = Id_triv # Important that this be Id and not 0
+    H = Id_triv
+    xi_fn = lambda t: 0
+    factory = hier.HierarchyIntegratorFactory(1, 0)
+    try:
+        factory.make_euler_jump_integrator(xi_fn, S, L, H)
+    except AttributeError as e:
+        if e.args[0] == "'numpy.ndarray' object has no attribute 'tocsr'":
+            assert_true(False, 'AttributeError "{}" suggests a dense array was '
+                        'used when a sparse array was required.'.
+                        format(e.args[0]))
+        else:
+            raise e
+
 def test_sparse_system_builder():
     d = 30
     sparse_basis = ssb.SparseBasis(d)
@@ -395,3 +417,4 @@ def test_sparse_system_builder():
     check_sparse_real_sand(sparse_basis, X, rho, Y)
     check_sparse_real_comm(sparse_basis, X, rho, Y)
     check_sparse_hamil_comm(sparse_basis, H, rho)
+    check_trivial_construction()
