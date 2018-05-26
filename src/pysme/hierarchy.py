@@ -168,6 +168,26 @@ class WavepacketUncondIntegrator:
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return integ.Solution(vec_soln, self.basis)
 
+    def integrate_hier_init_cond(self, rho_0_hier, times):
+        r"""Integrate the equation for a list of times with given initial
+        conditions, expressed as a full hierarchy density matrix rather than
+        only a system density matrix.
+
+        :param rho_0_hier:   The initial state of the system in vectorized form
+        :type rho_0_hier:    `numpy.array`
+        :param times:        A sequence of time points for which to solve for
+                             rho
+        :type times:         `list(real)`
+        :returns:            The components of the vecorized :math:`\rho` for
+                             all
+                             specified times
+        :rtype:              `Solution`
+
+        """
+        rho_0_vec = sb.vectorize(rho_0_hier, self.basis).real
+        vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
+        return integ.Solution(vec_soln, self.basis)
+
 class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
                  hom_ang=0, field_state=None):
