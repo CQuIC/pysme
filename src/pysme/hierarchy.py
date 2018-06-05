@@ -324,22 +324,29 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         return (self.k_T_ind + xi_t.real * self.k_T_re +
                 xi_t.imag * self.k_T_im + np.abs(xi_t)**2 * self.k_T_abs)
 
-    def no_jump_fn(self, rho, t):
+    def no_jump_fn(self, t, rho):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         F_t = self.F_t_fn(xi_t)
         return F_t @ rho + (k_T_t @ rho) * rho
 
-    def jump_fn(self, rho, t):
+    def jump_fn(self, t, rho):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         G_t = self.G_t_fn(xi_t)
         return G_t @ rho / (k_T_t @ rho)
 
-    def jump_rate_fn(self, rho, t):
+    def jump_rate_fn(self, t, rho):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         return k_T_t @ rho
+
+    def Dfun(self, t, rho):
+        xi_t = self.xi_fn(t)
+        k_T_t = self.k_T_t_fn(xi_t)
+        return (self.F_t_fn(xi_t) +
+                (k_T_t @ rho) * np.eye(rho.shape[0], dtype=k_T_t.dtype) +
+                np.outer(rho, k_T_t))
 
     def integrate(self, rho_0, times, Us=None, return_meas_rec=False):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
@@ -348,7 +355,7 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         if Us is None:
             Us = np.random.uniform(size=len(times) - 1)
 
-        vec_soln = sde.jump_euler(self.no_jump_fn, self.jump_fn,
+        vec_soln = sde.jump_euler(self.no_jump_fn, self.Dfun, self.jump_fn,
                                   self.jump_rate_fn, rho_0_vec, times, Us,
                                   return_dNs=return_meas_rec)
         if return_meas_rec:

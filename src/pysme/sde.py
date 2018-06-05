@@ -6,9 +6,12 @@
 
 """
 
+from warnings import warn
 import numpy as np
+from scipy.integrate import ode
 
-def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us, return_dNs=False):
+def jump_euler(no_jump_fn, Dfun, jump_fn, jump_rate_fn, X0, ts, Us,
+               return_dNs=False):
     r"""Integrate a system of ordinary stochastic differential equations subject
     to scalar poisson noise:
 
@@ -28,10 +31,14 @@ def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us, return_dNs=False):
 
     Parameters
     ----------
-    no_jump_fn : callable(X, t)
+    no_jump_fn : callable(t, X)
         Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
-    jump_fn : callable(X, t)
+    Dfun : callable(t, X)
+        Computes the Jacobian of the drift coefficient
+    jump_fn : callable(t, X)
         Computes the jump coefficient :math:`\vec{b}(\vec{X},t)`
+    jump_rate_fn : callable(t, X)
+        Computes the instantaneous jump rate
     X0 : numpy.array
         Initial condition on X
     ts : numpy.array
@@ -48,21 +55,29 @@ def jump_euler(no_jump_fn, jump_fn, jump_rate_fn, X0, ts, Us, return_dNs=False):
 
     """
 
-    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+    dts = np.diff(ts)
+
+    no_jump_integrator = ode(no_jump_fn, Dfun).set_integrator('vode')
 
     if return_dNs:
         dNs = []
 
     X = np.array([X0])
+    no_jump_integrator.set_initial_value(X0, ts[0])
 
     for t, dt, U in zip(ts[:-1], dts, Us):
-        EdN = jump_rate_fn(X[-1], t) * dt
+        EdN = jump_rate_fn(t, X[-1]) * dt
         if U > EdN:
-            X = np.vstack((X, X[-1] + no_jump_fn(X[-1], t) * dt))
+            X = np.vstack((X, no_jump_integrator.integrate(t + dt)))
+            if not no_jump_integrator.successful():
+                warn('Integrator failed.')
+                break
             if return_dNs:
                 dNs.append(0)
         else:
-            X = np.vstack((X, jump_fn(X[-1], t)))
+            Xjump = jump_fn(t, X[-1])
+            X = np.vstack((X, Xjump))
+            no_jump_integrator.set_initial_value(Xjump, t + dt)
             if return_dNs:
                 dNs.append(1)
 
