@@ -59,30 +59,26 @@ def jump_euler(no_jump_fn, Dfun, jump_fn, jump_rate_fn, X0, ts, Us,
 
     no_jump_integrator = ode(no_jump_fn, Dfun).set_integrator('vode')
 
-    if return_dNs:
-        dNs = []
+    dNs = np.zeros(len(ts) - 1, dtype=int)
 
     X = np.array([X0])
     no_jump_integrator.set_initial_value(X0, ts[0])
 
-    for t, dt, U in zip(ts[:-1], dts, Us):
+    for idx, (t, dt, U) in enumerate(zip(ts[:-1], dts, Us)):
         EdN = jump_rate_fn(t, X[-1]) * dt
         if U > EdN:
             X = np.vstack((X, no_jump_integrator.integrate(t + dt)))
             if not no_jump_integrator.successful():
                 warn('Integrator failed.')
                 break
-            if return_dNs:
-                dNs.append(0)
         else:
             Xjump = jump_fn(t, X[-1])
             X = np.vstack((X, Xjump))
             no_jump_integrator.set_initial_value(Xjump, t + dt)
-            if return_dNs:
-                dNs.append(1)
+            dNs[idx] = 1
 
     if return_dNs:
-        return X, np.array(dNs)
+        return X, dNs
     else:
         return X
 
