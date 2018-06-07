@@ -235,6 +235,17 @@ class Solution:
             The density matrix at each calculated time.
 
         """
+        return np.einsum('jk,kmn->jmn', self.vec_soln, self.basis)
+
+    def get_density_matrices_slow(self):
+        r"""Represent the solution as a sequence of Hermitian arrays.
+
+        Returns
+        -------
+        list of numpy.array
+            The density matrix at each calculated time.
+
+        """
         return [sum([comp*op for comp, op in zip(state, self.basis)])
                 for state in self.vec_soln]
 
