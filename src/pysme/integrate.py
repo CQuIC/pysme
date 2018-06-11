@@ -199,7 +199,7 @@ class Solution:
         self.vec_soln = vec_soln
         self.basis = basis
 
-    def get_expectations(self, observable):
+    def get_expectations(self, observable, hermitian=True):
         r"""Calculate the expectation value of an observable for all times.
 
         Returns
@@ -209,7 +209,13 @@ class Solution:
             times.
 
         """
-        dual = sb.dualize(observable, self.basis).real
+        # For an expectation, I want the trace with the observable. Dualize is
+        # used for calculating traces with the adjoint of the operator, so I
+        # need to preemptively adjoint here. This becomes important when taking
+        # traces with non-hermitial observables.
+        dual = sb.dualize(observable.conj().T, self.basis)
+        if hermitian:
+            dual = dual.real
         return np.dot(self.vec_soln, dual)
 
     def get_purities(self):
