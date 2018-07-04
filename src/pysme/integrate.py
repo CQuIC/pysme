@@ -342,7 +342,7 @@ class UncondGaussIntegrator(GaussIntegrator):
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return Solution(vec_soln, self.basis)
 
-    def integrate_non_herm(self, rho_0, times):
+    def integrate_non_herm(self, rho_0, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
         conditions that may be non hermitian (useful for applications involving
         the quantum regression theorem).
@@ -351,6 +351,9 @@ class UncondGaussIntegrator(GaussIntegrator):
         :type rho_0:    `numpy.array`
         :param times:   A sequence of time points for which to solve for rho
         :type times:    `list(real)`
+        :param method:  The integration method for `scipy.integrate.solve_ivp`
+                        to use.
+        :type method:   String
         :returns:       The components of the vecorized :math:`\rho` for all
                         specified times
         :rtype:         `Solution`
@@ -359,7 +362,7 @@ class UncondGaussIntegrator(GaussIntegrator):
         rho_0_vec = sb.vectorize(rho_0, self.basis)
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
                              (times[0], times[-1]),
-                             rho_0_vec, method='BDF', t_eval=times,
+                             rho_0_vec, method=method, t_eval=times,
                              jac=lambda t, rho: self.Dfun(rho, t))
         return Solution(ivp_soln.y.T, self.basis)
 

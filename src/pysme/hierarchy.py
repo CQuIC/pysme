@@ -133,7 +133,7 @@ class WavepacketUncondIntegrator:
         return (self.wp_ind + xi_t.real * self.wp_re + xi_t.imag * self.wp_im +
                 np.abs(xi_t)**2 * self.wp_abs)
 
-    def integrate(self, rho_0, times):
+    def integrate(self, rho_0, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
         conditions.
 
@@ -149,8 +149,11 @@ class WavepacketUncondIntegrator:
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
                                                        dtype=np.complex)),
                                  self.basis).real
-        vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
-        return integ.Solution(vec_soln, self.basis)
+        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
+                             (times[0], times[-1]),
+                             rho_0_vec, method=method, t_eval=times,
+                             jac=lambda t, rho: self.Dfun(t))
+        return integ.Solution(ivp_soln.y.T, self.basis)
 
     def integrate_vec_init_cond(self, rho_0_vec, times):
         r"""Integrate the equation for a list of times with given initial
@@ -168,7 +171,7 @@ class WavepacketUncondIntegrator:
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return integ.Solution(vec_soln, self.basis)
 
-    def integrate_hier_init_cond(self, rho_0_hier, times):
+    def integrate_hier_init_cond(self, rho_0_hier, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
         conditions, expressed as a full hierarchy density matrix rather than
         only a system density matrix. Handles non-hermitian initial conditions
@@ -180,6 +183,9 @@ class WavepacketUncondIntegrator:
         :param times:        A sequence of time points for which to solve for
                              rho
         :type times:         `list(real)`
+        :param method:       The integration method for
+                             `scipy.integrate.solve_ivp` to use.
+        :type method:        String
         :returns:            The components of the vecorized :math:`\rho` for
                              all
                              specified times
@@ -189,7 +195,7 @@ class WavepacketUncondIntegrator:
         rho_0_vec = sb.vectorize(rho_0_hier, self.basis)
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
                              (times[0], times[-1]),
-                             rho_0_vec, method='BDF', t_eval=times,
+                             rho_0_vec, method=method, t_eval=times,
                              jac=lambda t, rho: self.Dfun(t))
         return integ.Solution(ivp_soln.y.T, self.basis)
 
