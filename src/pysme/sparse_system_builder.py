@@ -23,9 +23,13 @@ def sparse_imag(sparse_array):
     return (sparse_array - np.conj(sparse_array)) / 2.j
 
 class SparseBasis:
-    def __init__(self, dim):
-        self.dim = dim
-        self.basis = COO.from_numpy(np.array(gm.get_basis(dim)))
+    def __init__(self, dim, basis=None):
+        if basis is None:
+            self.dim = dim
+            basis = gm.get_basis(dim)
+        else:
+            self.dim = basis[0].shape[0]
+        self.basis = COO.from_numpy(np.array(basis))
         self.sq_norms = COO.from_numpy(np.einsum('jmn,jnm->j',
                                                  self.basis.todense(),
                                                  self.basis.todense()))
