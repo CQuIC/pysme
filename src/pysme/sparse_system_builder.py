@@ -76,8 +76,7 @@ class SparseBasis:
         x and y are vectorized representations of the operators X and Y stored
         in sparse format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        The result is a dense matrix.
 
         """
         result_A = sparse.tensordot(x, self.struct, ([0], [0]))
@@ -109,8 +108,7 @@ class SparseBasis:
         x and y are vectorized representations of the operators X and Y stored
         in sparse format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        The result is a dense matrix.
 
         """
         struct_imag = sparse_imag(self.struct)
@@ -138,8 +136,7 @@ class SparseBasis:
         x is the vectorized representation of the operator X stored in sparse
         format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        The result is a dense matrix.
 
         """
         return self.make_real_comm_matrix(x, x)
@@ -152,7 +149,7 @@ class SparseBasis:
         h is the vectorized representation of the Hamiltonian H stored in sparse
         format.
 
-        Returns a dense matrix.
+        The result is a dense matrix.
 
         """
         struct_imag = sparse_imag(self.struct)
