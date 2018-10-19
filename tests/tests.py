@@ -337,6 +337,26 @@ def test_against_matrix_implementation():
                    for j in range(test_errors.shape[0])]
     assert_almost_equal(max(error_norms), 0.0, 7)
 
+def test_against_t1_t2_matrix_euler_test_vector():
+    with open('tests/t1-t2-matrix-euler-test-vector.npz', 'rb') as f:
+        t1_t2_test_vec = np.load(f)
+        Ls = t1_t2_test_vec['Ls']
+        H = t1_t2_test_vec['H']
+        rho0 = t1_t2_test_vec['rho0']
+        times = t1_t2_test_vec['times']
+        loaded_rhos = t1_t2_test_vec['rhos']
+    integrator = integrate.UncondLindbladIntegrator(Ls, H)
+    soln = integrator.integrate(rho0, times)
+    rhos = soln.get_density_matrices()
+    errors = rhos - loaded_rhos
+    error_norms = [sb.norm_squared(errors[j])
+                   for j in range(errors.shape[0])]
+    # Normally I'm checking to 7 decimal places, but my Euler integrator
+    # seems to only be able to get within 6 decimal places of the vectorized
+    # solution. Maybe I'll bother to get an analytic expression one of these
+    # days.
+    assert_almost_equal(max(error_norms), 0.0, 6)
+
 def check_sparse_vectorization(sparse_basis, ops):
     for op in ops:
         op_there_back = sparse_basis.matrize(sparse_basis.vectorize(op))

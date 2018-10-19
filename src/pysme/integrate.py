@@ -9,6 +9,7 @@
 import numpy as np
 from scipy.integrate import odeint, solve_ivp
 import pysme.system_builder as sb
+import pysme.sparse_system_builder as ssb
 import pysme.sde as sde
 import pysme.gellmann as gm
 
@@ -254,6 +255,113 @@ class Solution:
         """
         return [sum([comp*op for comp, op in zip(state, self.basis)])
                 for state in self.vec_soln]
+
+class LindbladIntegrator:
+    r"""Template class for Lindblad integrators.
+
+    Defines the most basic constructor shared by all integrators of Lindblad
+    ordinary and stochastic master equations.
+
+    Parameters
+    ----------
+    Ls : [numpy.array]
+        List-like collection of Lindblad operators
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `Ls`, and `H`.
+
+    """
+    def __init__(self, Ls, H, basis=None, drift_rep=None, **kwargs):
+        dim = Ls[0].shape[0]
+        self.basis = ssb.SparseBasis(dim, basis)
+
+        if drift_rep is None:
+            L_vecs = [self.basis.vectorize(L) for L in Ls]
+            h_vec = self.basis.vectorize(H)
+            self.Q = (self.basis.make_hamil_comm_matrix(h_vec)
+                      + sum([self.basis.make_diff_op_matrix(L_vec)
+                             for L_vec in L_vecs]))
+        else:
+            self.Q = drift_rep
+
+    def a_fn(self, rho, t):
+        return np.dot(self.Q, rho)
+
+    def integrate(self, rho_0, times):
+        raise NotImplementedError()
+
+class UncondLindbladIntegrator(LindbladIntegrator):
+    r"""Integrator for an unconditional Lindblad master equation.
+
+    Parameters
+    ----------
+    Ls : list of numpy.array
+        Collection of Lindblad operators
+    H : numpy.array
+        The plant Hamiltonian
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `Ls`, and `H`.
+
+    """
+    def Dfun(self, rho, t):
+        return self.Q
+
+    def integrate(self, rho_0, times, method='BDF'):
+        r"""Integrate the equation for a list of times with given initial
+        conditions.
+
+        :param rho_0:   The initial state of the system
+        :type rho_0:    `numpy.array`
+        :param times:   A sequence of time points for which to solve for rho
+        :type times:    `list(real)`
+        :returns:       The components of the vecorized :math:`\rho` for all
+                        specified times
+        :rtype:         `Solution`
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
+                             (times[0], times[-1]),
+                             rho_0_vec, method=method, t_eval=times,
+                             jac=lambda t, rho: self.Dfun(rho, t))
+        return Solution(ivp_soln.y.T, self.basis.basis)
+
+    def integrate_non_herm(self, rho_0, times, method='BDF'):
+        r"""Integrate the equation for a list of times with given initial
+        conditions that may be non hermitian (useful for applications involving
+        the quantum regression theorem).
+
+        :param rho_0:   The initial state of the system
+        :type rho_0:    `numpy.array`
+        :param times:   A sequence of time points for which to solve for rho
+        :type times:    `list(real)`
+        :param method:  The integration method for `scipy.integrate.solve_ivp`
+                        to use.
+        :type method:   String
+        :returns:       The components of the vecorized :math:`\rho` for all
+                        specified times
+        :rtype:         `Solution`
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True)
+        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
+                             (times[0], times[-1]),
+                             rho_0_vec, method=method, t_eval=times,
+                             jac=lambda t, rho: self.Dfun(rho, t))
+        return Solution(ivp_soln.y.T, self.basis.basis)
 
 class GaussIntegrator:
     r"""Template class for Gaussian integrators.
