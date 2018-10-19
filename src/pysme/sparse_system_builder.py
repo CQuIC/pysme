@@ -55,8 +55,15 @@ class SparseBasis:
             result = result.todense()
         return result
 
-    def dualize(self, op):
-        return np.conj(self.vectorize(op)) * self.sq_norms
+    def dualize(self, op, dense=True):
+        result = np.conj(self.vectorize(op)) * self.sq_norms
+        if not dense and type(result) == np.ndarray:
+            # I want the result stored in a sparse format even if it isn't
+            # sparse.
+            result = COO.from_numpy(result)
+        elif dense and type(result) == sparse.coo.COO:
+            result = result.todense()
+        return result
 
     def matrize(self, vec):
         """Take a (sparse) vectorized operator and return it in matrix form.

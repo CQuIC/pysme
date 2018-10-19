@@ -433,7 +433,8 @@ def check_sparse_vectorization(sparse_basis, ops):
 def check_sparse_duals(sparse_basis, ops):
     for op1, op2 in it.product(ops, ops):
         tr = np.trace(op1.conj().T @ op2)
-        ip = np.dot(sparse_basis.dualize(op1), sparse_basis.vectorize(op2))
+        ip = np.dot(sparse_basis.dualize(op1, dense=True),
+                    sparse_basis.vectorize(op2, dense=True))
         assert_almost_equal(np.abs(tr - ip), 0.0, 7)
 
 def check_sparse_real_sand(sparse_basis, X, rho, Y):
