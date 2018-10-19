@@ -44,13 +44,15 @@ class SparseBasis:
             # numpy arrays.
             self.struct = COO.from_numpy(self.struct)
 
-    def vectorize(self, op):
+    def vectorize(self, op, dense=False):
         sparse_op = COO.from_numpy(op)
         result = sparse.tensordot(self.dual, sparse_op, ([1,2], [1,0]))
-        if type(result) == np.ndarray:
+        if not dense and type(result) == np.ndarray:
             # I want the result stored in a sparse format even if it isn't
             # sparse.
             result = COO.from_numpy(result)
+        elif dense and type(result) == sparse.coo.COO:
+            result = result.todense()
         return result
 
     def dualize(self, op):
