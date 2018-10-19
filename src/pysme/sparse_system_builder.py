@@ -160,6 +160,20 @@ class SparseBasis:
             result = result.todense()
         return result.real
 
+    def make_double_comm_matrix(self, x, M):
+        """Make the superoperator matrix representation of
+
+        (M/2)[X†,[X†,rho]] + (M*/2)[X,[X,rho]]
+
+        x is the vectorized representation of the operator X stored in sparse
+        format.
+
+        The result is a dense matrix.
+
+        """
+        return -(self.make_real_comm_matrix(M * np.conj(x), x) +
+                 self.make_real_comm_matrix(x, M * np.conj(x)))
+
     def make_wiener_linear_matrix(self, x):
         Id_vec = self.vectorize(np.eye(self.dim))
         return 2 * self.make_real_sand_matrix(x, Id_vec)
