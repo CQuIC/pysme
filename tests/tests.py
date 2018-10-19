@@ -377,6 +377,28 @@ def test_against_random_spin1_matrix_euler_test_vector():
     # not going to happen.
     assert_almost_equal(max(error_norms), 0.0, 6)
 
+def test_against_random_spin1_gauss_matrix_euler_test_vector():
+    with open('tests/random-spin1-gauss-matrix-euler-test-vector.npz', 'rb') as f:
+        test_vec = np.load(f)
+        c_op = test_vec['c_op']
+        H = test_vec['H']
+        rho0 = test_vec['rho0']
+        times = test_vec['times']
+        loaded_rhos = test_vec['rhos']
+        N = float(test_vec['N'])
+        M = complex(test_vec['M'])
+    integrator = integrate.UncondGaussIntegrator(c_op, M, N, H)
+    soln = integrator.integrate(rho0, times)
+    rhos = soln.get_density_matrices()
+    errors = rhos - loaded_rhos
+    error_norms = [sb.norm_squared(errors[j])
+                   for j in range(errors.shape[0])]
+    # Normally I'm checking to 7 decimal places, but my Euler integrator
+    # seems to only be able to get within 6 decimal places of the vectorized
+    # solution. Analytic solution for a random instance like this is probably
+    # not going to happen.
+    assert_almost_equal(max(error_norms), 0.0, 6)
+
 def check_sparse_vectorization(sparse_basis, ops):
     for op in ops:
         op_there_back = sparse_basis.matrize(sparse_basis.vectorize(op))

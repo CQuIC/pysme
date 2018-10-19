@@ -224,9 +224,10 @@ def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
 
     return D_matrix
 
-# TODO: Formulate tests to verify correctness of this evolution.
 # TODO: Fix this function to compute matrix elements as described in the
 # Vectorization page in the documentation.
+# Can't remmber right now what problem I saw before, but we now have a test
+# that shows this operator is broken. Now to fix it!
 def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
                    **kwargs):
     r"""Return the matrix form of the squeezing double commutator operator.
