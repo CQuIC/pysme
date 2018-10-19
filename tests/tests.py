@@ -184,6 +184,32 @@ def test_system_builder():
     check_vectorize(c2_operators, mixed_basis2)
     check_vectorize(c3_operators, basis(3))
 
+    check_system_builder_double_comm_op()
+
+def check_system_builder_double_comm_op():
+    sx = np.array([[0, 1], [1, 0]], dtype=np.complex)
+    sm = np.array([[0, 0], [1, 0]], dtype=np.complex)
+    Id = np.eye(2, dtype=np.complex)
+    zero = np.zeros((2, 2), dtype=np.complex)
+    r = np.log(2)
+    N = np.sinh(r)**2
+    M = -np.sinh(r) * np.cosh(r)
+    H = zero
+    c_op = sm
+    c_op_dag = c_op.conjugate().T
+    rho0 = (Id + sx) / 2
+    integrator = integrate.UncondGaussIntegrator(c_op, M, N, H)
+    rho0_vec = sb.vectorize(rho0, integrator.basis)
+    partial_basis = integrator.basis[:-1]
+    common_dict = sb.op_calc_setup(c_op, M, N, H, partial_basis)
+    E = sb.double_comm_op(**common_dict)
+    vec_double_comm = E @ rho0_vec
+    matrix_double_comm = ((M / 2) * mf.comm(c_op_dag, mf.comm(c_op_dag, rho0))
+                          + (M.conjugate() / 2) * mf.comm(c_op,
+                                                          mf.comm(c_op, rho0)))
+    check_mat_eq(np.einsum('k,kmn->mn', vec_double_comm, integrator.basis),
+                 matrix_double_comm)
+
 def new_dW_from_dW(dW_2n, dW_2n_1):
     return dW_2n + dW_2n_1
 
