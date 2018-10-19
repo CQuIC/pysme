@@ -339,12 +339,12 @@ def test_against_matrix_implementation():
 
 def test_against_t1_t2_matrix_euler_test_vector():
     with open('tests/t1-t2-matrix-euler-test-vector.npz', 'rb') as f:
-        t1_t2_test_vec = np.load(f)
-        Ls = t1_t2_test_vec['Ls']
-        H = t1_t2_test_vec['H']
-        rho0 = t1_t2_test_vec['rho0']
-        times = t1_t2_test_vec['times']
-        loaded_rhos = t1_t2_test_vec['rhos']
+        test_vec = np.load(f)
+        Ls = test_vec['Ls']
+        H = test_vec['H']
+        rho0 = test_vec['rho0']
+        times = test_vec['times']
+        loaded_rhos = test_vec['rhos']
     integrator = integrate.UncondLindbladIntegrator(Ls, H)
     soln = integrator.integrate(rho0, times)
     rhos = soln.get_density_matrices()
@@ -355,6 +355,26 @@ def test_against_t1_t2_matrix_euler_test_vector():
     # seems to only be able to get within 6 decimal places of the vectorized
     # solution. Maybe I'll bother to get an analytic expression one of these
     # days.
+    assert_almost_equal(max(error_norms), 0.0, 6)
+
+def test_against_random_spin1_matrix_euler_test_vector():
+    with open('tests/random-spin1-matrix-euler-test-vector.npz', 'rb') as f:
+        test_vec = np.load(f)
+        Ls = test_vec['Ls']
+        H = test_vec['H']
+        rho0 = test_vec['rho0']
+        times = test_vec['times']
+        loaded_rhos = test_vec['rhos']
+    integrator = integrate.UncondLindbladIntegrator(Ls, H)
+    soln = integrator.integrate(rho0, times)
+    rhos = soln.get_density_matrices()
+    errors = rhos - loaded_rhos
+    error_norms = [sb.norm_squared(errors[j])
+                   for j in range(errors.shape[0])]
+    # Normally I'm checking to 7 decimal places, but my Euler integrator
+    # seems to only be able to get within 6 decimal places of the vectorized
+    # solution. Analytic solution for a random instance like this is probably
+    # not going to happen.
     assert_almost_equal(max(error_norms), 0.0, 6)
 
 def check_sparse_vectorization(sparse_basis, ops):
