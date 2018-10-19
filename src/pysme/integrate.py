@@ -7,7 +7,7 @@
 """
 
 import numpy as np
-from scipy.integrate import odeint, solve_ivp
+from scipy.integrate import solve_ivp
 import pysme.system_builder as sb
 import pysme.sparse_system_builder as ssb
 import pysme.sde as sde
@@ -316,7 +316,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         don't need to calculate from `Ls`, and `H`.
 
     """
-    def Dfun(self, rho, t):
+    def Dfun(self, t, rho):
         return self.Q
 
     def integrate(self, rho_0, times, method='BDF'):
@@ -336,7 +336,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
-                             jac=lambda t, rho: self.Dfun(rho, t))
+                             jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis.basis)
 
     def integrate_non_herm(self, rho_0, times, method='BDF'):
@@ -360,7 +360,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
-                             jac=lambda t, rho: self.Dfun(rho, t))
+                             jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis.basis)
 
 class GaussIntegrator:
@@ -430,10 +430,10 @@ class UncondGaussIntegrator(GaussIntegrator):
         don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
 
     """
-    def Dfun(self, rho, t):
+    def Dfun(self, t, rho):
         return self.Q
 
-    def integrate(self, rho_0, times):
+    def integrate(self, rho_0, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
         conditions.
 
@@ -447,8 +447,11 @@ class UncondGaussIntegrator(GaussIntegrator):
 
         """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
-        vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
-        return Solution(vec_soln, self.basis)
+        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
+                             (times[0], times[-1]),
+                             rho_0_vec, method=method, t_eval=times,
+                             jac=self.Dfun)
+        return Solution(ivp_soln.y.T, self.basis)
 
     def integrate_non_herm(self, rho_0, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
@@ -471,7 +474,7 @@ class UncondGaussIntegrator(GaussIntegrator):
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
-                             jac=lambda t, rho: self.Dfun(rho, t))
+                             jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis)
 
 class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
