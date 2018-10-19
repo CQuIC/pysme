@@ -224,10 +224,6 @@ def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
 
     return D_matrix
 
-# TODO: Fix this function to compute matrix elements as described in the
-# Vectorization page in the documentation.
-# Can't remmber right now what problem I saw before, but we now have a test
-# that shows this operator is broken. Now to fix it!
 def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
                    **kwargs):
     r"""Return the matrix form of the squeezing double commutator operator.
@@ -276,16 +272,17 @@ def double_comm_op(dim, C_vector, triple_prods, M_sq, basis_norms_sq, basis,
 
     """
 
+    # This function has been patched back together after I changed the
+    # definition of triple_prods, so it might not make much sense.
+
     E_matrix = np.zeros((dim, dim)) # The matrix to return
 
-    col_symm_ops = [sum([(M_sq.conjugate() * C_vector[n] ** 2).real *
+    col_symm_ops = [sum([(2 / 3) * (M_sq.conjugate() * C_vector[n] ** 2).real *
                          (triple_prods[n, n, col] - triple_prods[n, col, n])
                          for n in range(dim)]) for col in range(dim)]
     col_non_symm_ops = [sum([(M_sq.conjugate() * C_vector[m] *
                               C_vector[n]).real *
-                             (triple_prods[m, n, col] +
-                              triple_prods[col, m, n] -
-                              2.0 * triple_prods[m, col, n])
+                             (-2.0 * triple_prods[m, col, n])
                              for m, n in it.chain(*[it.product(range(k), [k])
                                                     for k in range(dim)])])
                         for col in range(dim)]
