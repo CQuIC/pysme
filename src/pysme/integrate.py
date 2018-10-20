@@ -44,6 +44,15 @@ def b_dx_b(G2, k_T_G, G, k_T, rho):
     return (np.dot(k_T_G, rho) + 2*k_rho_dot**2)*rho + \
             np.dot(G2 + 2*k_rho_dot*G, rho)
 
+def b_dx_b_tr_dec(G2, rho):
+    r"""Same as :func:`b_dx_b`, but for the linear differential equation.
+
+    Because the nonlinear terms are discarded, this function requires fewer
+    arguments.
+
+    """
+    return np.dot(G2, rho)
+
 def b_dx_a(QG, k_T, Q, rho):
     r"""A term in Taylor integration methods.
 
@@ -71,6 +80,15 @@ def b_dx_a(QG, k_T, Q, rho):
     """
     return np.dot(QG + np.dot(k_T, rho)*Q, rho)
 
+def b_dx_a_tr_dec(QG, rho):
+    r"""Same as :func:`b_dx_a`, but for the linear differential equation.
+
+    Because the nonlinear terms are discarded, this function requires fewer
+    arguments.
+
+    """
+    return np.dot(QG, rho)
+
 def a_dx_b(GQ, k_T, Q, k_T_Q, rho):
     r"""A term in Taylor integration methods.
 
@@ -97,6 +115,15 @@ def a_dx_b(GQ, k_T, Q, k_T_Q, rho):
 
     """
     return np.dot(GQ + np.dot(k_T, rho)*Q, rho) + np.dot(k_T_Q, rho)*rho
+
+def a_dx_b_tr_dec(GQ, rho):
+    r"""Same as :func:`a_dx_b`, but for the linear differential equation.
+
+    Because the nonlinear terms are discarded, this function requires fewer
+    arguments.
+
+    """
+    return np.dot(GQ, rho)
 
 def a_dx_a(Q2, rho):
     r"""A term in Taylor integration methods.
@@ -158,6 +185,15 @@ def b_dx_b_dx_b(G3, G2, G, k_T, k_T_G, k_T_G2, rho):
     return (np.dot(G3 + 3*k_rho_dot*G2 + 3*(k_T_G_rho_dot + 2*k_rho_dot**2)*G,
                    rho) + (k_T_G2_rho_dot + 6*k_rho_dot*k_T_G_rho_dot +
                            6*k_rho_dot**3)*rho)
+
+def b_dx_b_dx_b_tr_dec(G3, rho):
+    r"""Same as :func:`b_dx_b_dx_b`, but for the linear differential equation.
+
+    Because the nonlinear terms are discarded, this function requires fewer
+    arguments.
+
+    """
+    return np.dot(G3, rho)
 
 def b_b_dx_dx_b(G, k_T, k_T_G, rho):
     r"""A term in Taylor integration methods.
@@ -523,10 +559,17 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
     def b_fn(self, rho, t):
         return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
 
+    def b_fn_tr_dec(self, rho, t):
+        # For use with a trace-decreasing linear integration function
+        return np.dot(self.G, rho)
+
     def dW_fn(self, dM, dt, rho, t):
         return dM + np.dot(self.k_T, rho) * dt
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
+        raise NotImplementedError()
+
+    def integrate_tr_dec(self, rho_0, times, U1s=None, U2s=None):
         raise NotImplementedError()
 
     def gen_meas_record(self, rho_0, times, U1s=None):
@@ -719,6 +762,42 @@ class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
         vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
         return Solution(vec_soln, self.basis)
 
+    def integrate_tr_dec(self, rho_0, times, U1s=None, U2s=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise). Integrates the linear equation,
+        which ignores the tr[(c + cdag) rho] rho term and therefore decreases
+        the trace.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+        U2s: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler(self.a_fn, self.b_fn_tr_dec, rho_0_vec, times,
+                             U1s)
+        return Solution(vec_soln, self.basis)
+
     def integrate_measurements(self, rho_0, times, dMs):
         r"""Integrate system evolution conditioned on a measurement record.
 
@@ -771,11 +850,14 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
     """
-
     def b_dx_b_fn(self, rho, t):
         # TODO: May want this to be defined by the constructor to facilitate
         # numba optimization.
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
+
+    def b_dx_b_fn_tr_dec(self, rho, t):
+        # Used by trace decreasing interator
+        return b_dx_b_tr_dec(self.G2, rho)
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         r"""Integrate the initial value problem.
@@ -809,6 +891,42 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
 
         vec_soln = sde.milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
                                 times, U1s)
+        return Solution(vec_soln, self.basis)
+
+    def integrate_tr_dec(self, rho_0, times, U1s=None, U2s=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise). Integrates the linear equation,
+        which ignores the tr[(c + cdag) rho] rho term and therefore decreases
+        the trace.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+        U2s: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.milstein(self.a_fn, self.b_fn_tr_dec,
+                                self.b_dx_b_fn_tr_dec, rho_0_vec, times, U1s)
         return Solution(vec_soln, self.basis)
 
     def integrate_measurements(self, rho_0, times, dMs):
@@ -885,14 +1003,26 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     def b_fn(self, rho):
         return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
 
+    def b_fn_tr_dec(self, rho):
+        return np.dot(self.G, rho)
+
     def b_dx_b_fn(self, rho):
         return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
+
+    def b_dx_b_fn_tr_dec(self, rho):
+        return b_dx_b_tr_dec(self.G2, rho)
 
     def b_dx_a_fn(self, rho):
         return b_dx_a(self.QG, self.k_T, self.Q, rho)
 
+    def b_dx_a_fn_tr_dec(self, rho):
+        return b_dx_a_tr_dec(self.QG, rho)
+
     def a_dx_b_fn(self, rho):
         return a_dx_b(self.GQ, self.k_T, self.Q, self.k_T_Q, rho)
+
+    def a_dx_b_fn_tr_dec(self, rho):
+        return a_dx_b_tr_dec(self.GQ, rho)
 
     def a_dx_a_fn(self, rho):
         return a_dx_a(self.Q2, rho)
@@ -901,8 +1031,14 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         return b_dx_b_dx_b(self.G3, self.G2, self.G, self.k_T, self.k_T_G,
                            self.k_T_G2, rho)
 
+    def b_dx_b_dx_b_fn_tr_dec(self, rho):
+        return b_dx_b_dx_b_tr_dec(self.G3, rho)
+
     def b_b_dx_dx_b_fn(self, rho):
         return b_b_dx_dx_b(self.G, self.k_T, self.k_T_G, rho)
+
+    def b_b_dx_dx_b_fn_tr_dec(self, rho):
+        return 0
 
     def b_b_dx_dx_a_fn(self, rho):
         return 0
@@ -943,6 +1079,51 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
                                            self.b_dx_a_fn, self.a_dx_b_fn,
                                            self.a_dx_a_fn, self.b_dx_b_dx_b_fn,
                                            self.b_b_dx_dx_b_fn,
+                                           self.b_b_dx_dx_a_fn,
+                                           rho_0_vec, times, U1s, U2s)
+        return Solution(vec_soln, self.basis)
+
+    def integrate_tr_dec(self, rho_0, times, U1s=None, U2s=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise). Integrates the linear equation,
+        which ignores the tr[(c + cdag) rho] rho term and therefore decreases
+        the trace.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+        U2s: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = sb.vectorize(rho_0, self.basis).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+        if U2s is None:
+            U2s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.time_ind_taylor_1_5(self.a_fn, self.b_fn_tr_dec,
+                                           self.b_dx_b_fn_tr_dec,
+                                           self.b_dx_a_fn_tr_dec,
+                                           self.a_dx_b_fn_tr_dec,
+                                           self.a_dx_a_fn,
+                                           self.b_dx_b_dx_b_fn_tr_dec,
+                                           self.b_b_dx_dx_b_fn_tr_dec,
                                            self.b_b_dx_dx_a_fn,
                                            rho_0_vec, times, U1s, U2s)
         return Solution(vec_soln, self.basis)
