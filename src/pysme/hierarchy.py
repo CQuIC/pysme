@@ -341,6 +341,16 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         F_t = self.F_t_fn(xi_t)
         return F_t @ rho + (k_T_t @ rho) * rho
 
+    def no_jump_fn_tr_dec(self, t, rho):
+        xi_t = self.xi_fn(t)
+        F_t = self.F_t_fn(xi_t)
+        return F_t @ rho
+
+    def no_jump_tr_dec_D_fn(self, t, rho):
+        xi_t = self.xi_fn(t)
+        F_t = self.F_t_fn(xi_t)
+        return F_t
+
     def jump_fn(self, t, rho):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
@@ -374,3 +384,13 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
             return integ.Solution(vec_soln, self.basis), dNs
 
         return integ.Solution(vec_soln, self.basis)
+
+    def integrate_tr_dec_no_jump(self, rho_0, times, method='BDF'):
+        rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
+                                                       dtype=np.complex)),
+                                 self.basis).real
+
+        ivp_soln = solve_ivp(self.no_jump_fn_tr_dec, (times[0], times[-1]),
+                             rho_0_vec, method=method, t_eval=times,
+                             jac=self.no_jump_tr_dec_D_fn)
+        return integ.Solution(ivp_soln.y.T, self.basis)
