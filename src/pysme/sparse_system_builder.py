@@ -30,11 +30,18 @@ class SparseBasis:
         else:
             self.dim = basis[0].shape[0]
         self.basis = COO.from_numpy(np.array(basis))
+        # Diagonal metric (since we're working with what are assumed to be
+        # orthogonal but not necessarily normalized basis vectors)
         self.sq_norms = COO.from_numpy(np.einsum('jmn,jnm->j',
                                                  self.basis.todense(),
                                                  self.basis.todense()))
+        # Diagonal inverse metric
         sq_norms_inv = COO.from_numpy(1 / self.sq_norms.todense())
+        # Dual basis obtained from the original basis by the inverse metric
         self.dual = self.basis * sq_norms_inv[:,None,None]
+        # Structure coefficients for the Lie algebra showing how to represent a
+        # product of two basis elements as a complex-linear combination of basis
+        # elements
         self.struct = sparse.tensordot(sparse.tensordot(self.basis, self.basis,
                                                         ([2], [1])),
                                        self.dual, ([1, 3], [2, 1]))
@@ -56,7 +63,9 @@ class SparseBasis:
         return result
 
     def dualize(self, op, dense=True):
-        result = np.conj(self.vectorize(op)) * self.sq_norms
+        sparse_op = COO.from_numpy(op)
+        result = np.conj(sparse.tensordot(self.basis, sparse_op,
+                                          ([1,2], [1,0])))
         if not dense and type(result) == np.ndarray:
             # I want the result stored in a sparse format even if it isn't
             # sparse.
