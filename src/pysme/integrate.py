@@ -292,6 +292,14 @@ class Solution:
         return [sum([comp*op for comp, op in zip(state, self.basis)])
                 for state in self.vec_soln]
 
+    def save(self, outfile):
+        np.savez_compressed(outfile, vec_soln=self.vec_soln,
+                            basis=self.basis)
+
+def load_solution(infile):
+    loaded = np.load(infile)
+    return Solution(loaded['vec_soln'], loaded['basis'])
+
 class LindbladIntegrator:
     r"""Template class for Lindblad integrators.
 
