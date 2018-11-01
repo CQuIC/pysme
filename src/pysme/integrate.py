@@ -6,6 +6,7 @@
 
 """
 
+from functools import partial
 import numpy as np
 from scipy.integrate import solve_ivp
 import sparse
@@ -332,11 +333,11 @@ class LindbladIntegrator:
         self.basis = ssb.SparseBasis(dim, basis)
 
         if drift_rep is None:
-            L_vecs = [self.basis.vectorize(L) for L in Ls]
-            h_vec = self.basis.vectorize(H)
-            self.Q = (self.basis.make_hamil_comm_matrix(h_vec)
+            self.L_vecs = [self.basis.vectorize(L) for L in Ls]
+            self.h_vec = self.basis.vectorize(H)
+            self.Q = (self.basis.make_hamil_comm_matrix(self.h_vec)
                       + sum([self.basis.make_diff_op_matrix(L_vec)
-                             for L_vec in L_vecs]))
+                             for L_vec in self.L_vecs]))
         else:
             self.Q = drift_rep
 
@@ -411,6 +412,66 @@ class UncondLindbladIntegrator(LindbladIntegrator):
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis.basis)
+
+class JumpLindbladIntegrator(UncondLindbladIntegrator):
+    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
+        super().__init__(Ls, H, basis, drift_rep, **kwargs)
+        L_meas_vec = self.L_vecs[meas_L_idx]
+        self.G = -self.basis.make_real_sand_matrix(L_meas_vec, L_meas_vec)
+        L_meas = Ls[meas_L_idx]
+        self.kT = self.basis.dualize(L_meas.conj().T @ L_meas).real
+        # Add the appropriate operator to convert the D operator into the
+        # no-jump operator (-1/2) (L L† rho + rho L L†)
+        self.lin_no_jump_op = self.Q + self.G
+        # The jump operator without renormalization: L† rho L
+        self.lin_jump_op = -self.G
+        self.tr_fnctnl = self.basis.dualize(np.eye(L_meas.shape[0],
+                                                   dtype=L_meas.dtype)).real
+
+    def lin_no_jump_Dfun(self, t, rho):
+        return self.lin_no_jump_op
+
+    def lin_no_jump_a_fn(self, t, rho):
+        return self.lin_no_jump_op @ rho
+
+    def jump_event(self, t, rho, jump_threshold):
+        return self.tr_fnctnl @ rho - jump_threshold
+
+    def integrate(self, rho_0, times, Us=None, return_meas_rec=False,
+                  method='BDF'):
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if Us is None:
+            jump_thresholds = iter([])
+        else:
+            jump_thresholds = iter(Us)
+        meas_rec = []
+        start_idx = 0
+        vec_soln_segments = []
+        jump_occurred = True
+        while jump_occurred:
+            try:
+                jump_threshold = next(jump_thresholds)
+            except StopIteration:
+                # If no jump thresholds are provided or we run out, generate new
+                # random thresholds.
+                jump_threshold = rs.uniform()
+            jump = partial(self.jump_event, jump_threshold=jump_threshold)
+            jump.terminal = True
+            ivp_soln = solve_ivp(self.lin_no_jump_a_fn,
+                                 [times[start_idx], times[-1]], rho_0_vec,
+                                 t_eval=times[start_idx:], events=jump,
+                                 method=method, jac=self.lin_no_jump_Dfun)
+            traces = np.tensordot(ivp_soln.y, self.tr_fnctnl, [0, 0])
+            vec_soln_segments.append(ivp_soln.y.T / traces[:,np.newaxis])
+            if ivp_soln.status == 1:
+                # A jump occurred
+                meas_rec.append(ivp_soln.t_events[0][0])
+                start_idx += len(ivp_soln.t)
+                rho_0_vec = self.lin_jump_op @ ivp_soln.y.T[-1]
+                rho_0_vec = rho_0_vec / (self.tr_fnctnl @ rho_0_vec)
+            else:
+                jump_occurred = False
+        return Solution(np.vstack(vec_soln_segments), self.basis.basis)
 
 class GaussIntegrator:
     r"""Template class for Gaussian integrators.
