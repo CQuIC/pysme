@@ -8,6 +8,7 @@
 
 import numpy as np
 from scipy.integrate import solve_ivp
+import sparse
 import pysme.system_builder as sb
 import pysme.sparse_system_builder as ssb
 import pysme.sde as sde
@@ -265,8 +266,12 @@ class Solution:
             time.
 
         """
-        basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
-                               for op in self.basis])
+        if type(self.basis) == sparse.coo.COO:
+            basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
+                                   for op in self.basis.todense()])
+        else:
+            basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
+                                   for op in self.basis])
         return np.dot(self.vec_soln**2, basis_dual)
 
     def get_density_matrices(self):
