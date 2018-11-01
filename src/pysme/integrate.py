@@ -335,7 +335,7 @@ class LindbladIntegrator:
         else:
             self.Q = drift_rep
 
-    def a_fn(self, rho, t):
+    def a_fn(self, t, rho):
         return np.dot(self.Q, rho)
 
     def integrate(self, rho_0, times):
@@ -377,7 +377,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
 
         """
         rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
-        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
+        ivp_soln = solve_ivp(self.a_fn,
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.Dfun)
@@ -401,7 +401,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
 
         """
         rho_0_vec = self.basis.vectorize(rho_0, dense=True)
-        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
+        ivp_soln = solve_ivp(self.a_fn,
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.Dfun)
