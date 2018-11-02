@@ -64,6 +64,43 @@ def euler_integrate_sqz_hier(rho_0, c, r, mu, gamma, xi_fn, times, m_max):
                                                xi_fn(t), m_max),
                               times)
 
+class HierarchySolution(integ.Solution):
+    def __init__(self, vec_soln, basis, d_sys):
+        super().__init__(vec_soln, basis)
+        self.d_sys = d_sys
+        self.d_total = int(np.sqrt(basis.shape[0]))
+        self.d_hier = self.d_total // self.d_sys
+        self.basis_sys = ssb.SparseBasis(d_sys).basis.todense()
+
+    def get_phys_dual_basis(self, field_rho_0):
+        return np.array([sb.dualize(np.kron(basis_el, field_rho_0),
+                                    self.basis).real / sb.norm_squared(basis_el)
+                         for basis_el in self.basis_sys])
+
+    def get_expectations(self, observable, field_rho_0, hermitian=True):
+        hier_obs = np.kron(observable, field_rho_0)
+        return super().get_expectations(hier_obs, hermitian)
+
+    def get_purities(self, field_rho_0):
+        raise NotImplementedError()
+
+    def get_density_matrices(self, field_rho_0):
+        raise NotImplementedError()
+
+    def save(self, outfile):
+        np.savez_compressed(outfile, vec_soln=self.vec_soln,
+                            basis=self.basis, d_sys=self.d_sys)
+
+    def get_phys_soln(self, field_rho_0):
+        phys_dual_basis = self.get_phys_dual_basis(field_rho_0)
+        return integ.Solution(np.einsum('jk,mk->mj', phys_dual_basis,
+                                        self.vec_soln), self.basis_sys)
+
+def load_hierarchy_solution(infile):
+    loaded = np.load(infile)
+    return HierarchySolution(loaded['vec_soln'], loaded['basis'],
+                             loaded['d_sys'])
+
 class HierarchyIntegratorFactory():
     def __init__(self, d_sys, n_max):
         self.d_sys = d_sys
@@ -102,6 +139,7 @@ class WavepacketUncondIntegrator:
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0):
         self.basis = sparse_basis.basis.todense()
         self.n_max = n_max
+        self.d_sys = S.shape[0]
         self.xi_fn = xi_fn
 
         I_hier = np.eye(n_max + 1, dtype=np.complex)
@@ -118,7 +156,7 @@ class WavepacketUncondIntegrator:
         self.wp_im = 2 * sparse_basis.make_real_comm_matrix(1.j * self.SA_vec,
                                                             self.L_vec)
 
-        self.I_sys = np.eye(S.shape[0], dtype=np.complex)
+        self.I_sys = np.eye(self.d_sys, dtype=np.complex)
         Asq_pl_vec = sparse_basis.vectorize(np.kron(self.I_sys, self.Asq_pl))
         S_vec = sparse_basis.vectorize(np.kron(S, I_hier))
         self.Asand = sparse_basis.make_real_sand_matrix(Asq_pl_vec, Asq_pl_vec)
@@ -153,7 +191,7 @@ class WavepacketUncondIntegrator:
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=lambda t, rho: self.Dfun(t))
-        return integ.Solution(ivp_soln.y.T, self.basis)
+        return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
     def integrate_vec_init_cond(self, rho_0_vec, times):
         r"""Integrate the equation for a list of times with given initial
@@ -169,7 +207,7 @@ class WavepacketUncondIntegrator:
 
         """
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
-        return integ.Solution(vec_soln, self.basis)
+        return HierarchySolution(vec_soln, self.basis, self.d_sys)
 
     def integrate_hier_init_cond(self, rho_0_hier, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
@@ -197,7 +235,7 @@ class WavepacketUncondIntegrator:
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=lambda t, rho: self.Dfun(t))
-        return integ.Solution(ivp_soln.y.T, self.basis)
+        return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
 class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
@@ -240,7 +278,7 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
         if U1s is None:
             U1s = np.random.randn(len(times) - 1)
         vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
-        return integ.Solution(vec_soln, self.basis)
+        return HierarchySolution(vec_soln, self.basis, self.d_sys)
 
 class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
@@ -288,7 +326,7 @@ class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
 
         vec_soln = sde.milstein(self.a_fn, self.b_fn, self.b_dx_b_fn, rho_0_vec,
                                 times, U1s)
-        return integ.Solution(vec_soln, self.basis)
+        return HierarchySolution(vec_soln, self.basis, self.d_sys)
 
 class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0,
@@ -381,9 +419,9 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
                                   return_dNs=return_meas_rec)
         if return_meas_rec:
             vec_soln, dNs = vec_soln
-            return integ.Solution(vec_soln, self.basis), dNs
+            return HierarchySolution(vec_soln, self.basis, self.d_sys), dNs
 
-        return integ.Solution(vec_soln, self.basis)
+        return HierarchySolution(vec_soln, self.basis, self.d_sys)
 
     def integrate_tr_dec_no_jump(self, rho_0, times, method='BDF'):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
@@ -393,4 +431,4 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         ivp_soln = solve_ivp(self.no_jump_fn_tr_dec, (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.no_jump_tr_dec_D_fn)
-        return integ.Solution(ivp_soln.y.T, self.basis)
+        return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
