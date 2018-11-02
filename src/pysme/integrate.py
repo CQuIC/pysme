@@ -454,7 +454,7 @@ class JumpLindbladIntegrator(UncondLindbladIntegrator):
             except StopIteration:
                 # If no jump thresholds are provided or we run out, generate new
                 # random thresholds.
-                jump_threshold = rs.uniform()
+                jump_threshold = np.random.uniform()
             jump = partial(self.jump_event, jump_threshold=jump_threshold)
             jump.terminal = True
             ivp_soln = solve_ivp(self.lin_no_jump_a_fn,
