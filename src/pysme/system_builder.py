@@ -7,8 +7,8 @@
 
 """
 
-import numpy as np
 import itertools as it
+import numpy as np
 
 def recur_dot(mats):
     """Perform numpy.dot on a list in a right-associative manner."""
@@ -21,7 +21,7 @@ def recur_dot(mats):
 
 def norm_squared(operator):
     """Returns the square of the Frobenius norm of the operator.
-    
+
     The `Frobenius norm
     <https://en.wikipedia.org/wiki/Matrix_norm#Frobenius_norm>`_ of an
     operator is analogous to the 2-norm of a vector.
@@ -39,7 +39,7 @@ def norm_squared(operator):
     """
 
     return abs(np.tensordot(operator.conj().T, operator,
-               axes=[[1, 0], [0, 1]]))
+                            axes=[[1, 0], [0, 1]]))
 
 def vectorize(operator, basis):
     """Vectorize an operator in a particular operator basis.
@@ -63,7 +63,7 @@ def vectorize(operator, basis):
 
 def dualize(operator, basis):
     r"""Take an operator to its dual vectorized form in some operator basis.
-    
+
     Designed to work in conjunction with ``vectorize`` so that, given an
     orthogonal basis :math:`\{\Lambda^m\}` where
     :math:`\operatorname{Tr}[{\Lambda^m}^\dagger\Lambda^n]\propto\delta_{mn}`,
@@ -104,10 +104,10 @@ class Basis:
 
         self.triple_prods = {(i, j, k): np.dot(self.elements[i],
                                                self.double_prods[j, k]) -
-                             0.5 * np.dot(self.elements[k],
-                                          self.double_prods[i, j]) -
-                             0.5 * np.dot(self.elements[j],
-                                          self.double_prods[k, i])
+                                        0.5 * np.dot(self.elements[k],
+                                                     self.double_prods[i, j]) -
+                                        0.5 * np.dot(self.elements[j],
+                                                     self.double_prods[k, i])
                              for j, k, i in it.product(range(self.dim),
                                                        repeat=3)}
 
@@ -151,14 +151,14 @@ def construct_G_k_T(c_op, M_sq, N, H, partial_basis):
                                 (N + M_sq) * c_op.conj().T, M_sq, N, H,
                                 partial_basis)
 
-    G, k_T = weiner_op(**common_dict)
+    G, k_T = wiener_op(**common_dict)
 
     return G, k_T
 
 
 def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
     r"""Return the matrix form of the diffusion linear operator.
-    
+
     Compute the matrix :math:`D` such that when :math:`\rho` is vectorized the
     expression
 
@@ -175,7 +175,7 @@ def diffusion_op(dim, C_vector, triple_prods, basis_norms_sq, basis, **kwargs):
 
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
-    
+
     Parameters
     ----------
     dim : integer
@@ -345,7 +345,8 @@ def hamiltonian_op(dim, H_vector, double_prods, basis_norms_sq, basis,
 
     col_ops = [sum([H_vector[n].real * (double_prods[n, col] -
                                         double_prods[col, n])
-               for n in range(dim)]) for col in range(dim)]
+                    for n in range(dim)])
+               for col in range(dim)]
 
     for row in range(dim):
         for col in range(dim):
@@ -356,9 +357,9 @@ def hamiltonian_op(dim, H_vector, double_prods, basis_norms_sq, basis,
 
     return F_matrix
 
-def weiner_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
+def wiener_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
     r"""Return the matrix and vector governing the stochastic evolution
-    
+
     Compute the matrix-vector pair :math:`(G,\vec{k})` such that when
     :math:`\rho` is vectorized the expression
 
@@ -375,7 +376,7 @@ def weiner_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
 
     Vectorization is done according to the order prescribed in *basis*, with the
     component proportional to identity in the last place.
-    
+
     Parameters
     ----------
     dim : integer
@@ -411,7 +412,7 @@ def weiner_op(dim, C_vector, double_prods, basis_norms_sq, basis, **kwargs):
         k_vec[row] = -2.0 * C_vector[row].real * basis_norms_sq[row]
         for col in range(dim):
             G_matrix[row, col] = 2 * (np.tensordot(basis[row], col_ops[col],
-                                      [[1, 0], [0, 1]]).real /
+                                                   [[1, 0], [0, 1]]).real /
                                       basis_norms_sq[row])
 
     return G_matrix, k_vec

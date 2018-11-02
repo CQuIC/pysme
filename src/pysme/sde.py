@@ -246,7 +246,7 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
 
     for t, dt, dW in zip(ts[:-1], dts, dWs):
         X = np.vstack((X, X[-1] + drift(X[-1], t)*dt + diffusion(X[-1], t)*dW +
-                      b_dx_b(X[-1], t)*(dW**2 - dt)/2))
+                       b_dx_b(X[-1], t)*(dW**2 - dt)/2))
 
     return X
 

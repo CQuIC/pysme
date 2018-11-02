@@ -45,7 +45,7 @@ class SparseBasis:
         self.struct = sparse.tensordot(sparse.tensordot(self.basis, self.basis,
                                                         ([2], [1])),
                                        self.dual, ([1, 3], [2, 1]))
-        if type(self.struct) == np.ndarray:
+        if isinstance(self.struct, np.ndarray):
             # Sometimes sparse.tensordot returns numpy arrays. We want to force
             # it to be sparse, since sparse.tensordot fails when passed two
             # numpy arrays.
@@ -54,11 +54,11 @@ class SparseBasis:
     def vectorize(self, op, dense=False):
         sparse_op = COO.from_numpy(op)
         result = sparse.tensordot(self.dual, sparse_op, ([1,2], [1,0]))
-        if not dense and type(result) == np.ndarray:
+        if not dense and isinstance(result, np.ndarray):
             # I want the result stored in a sparse format even if it isn't
             # sparse.
             result = COO.from_numpy(result)
-        elif dense and type(result) == sparse.coo.COO:
+        elif dense and isinstance(result, sparse.coo.COO):
             result = result.todense()
         return result
 
@@ -66,11 +66,11 @@ class SparseBasis:
         sparse_op = COO.from_numpy(op)
         result = np.conj(sparse.tensordot(self.basis, sparse_op,
                                           ([1,2], [1,0])))
-        if not dense and type(result) == np.ndarray:
+        if not dense and isinstance(result, np.ndarray):
             # I want the result stored in a sparse format even if it isn't
             # sparse.
             result = COO.from_numpy(result)
-        elif dense and type(result) == sparse.coo.COO:
+        elif dense and isinstance(result, sparse.coo.COO):
             result = result.todense()
         return result
 
@@ -101,14 +101,14 @@ class SparseBasis:
         result_B = sparse.tensordot(np.conj(y), self.struct, ([0], [1]))
         # sparse.tensordot fails if both arguments are numpy ndarrays, so we
         # force the intermediate arrays to be sparse
-        if type(result_B) == np.ndarray:
+        if isinstance(result_B, np.ndarray):
             result_B = COO.from_numpy(result_B)
-        if type(result_A) == np.ndarray:
+        if isinstance(result_A, np.ndarray):
             result_A = COO.from_numpy(result_A)
         result = sparse_real(sparse.tensordot(result_A, result_B, ([0], [1])))
         # We want our result to be dense, to make things predictable from the
         # outside.
-        if type(result) == sparse.coo.COO:
+        if isinstance(result, sparse.coo.COO):
             result = result.todense()
         return result.real
 
@@ -134,15 +134,15 @@ class SparseBasis:
         # force the intermediate arrays to be sparse
         result_A = sparse.tensordot(np.conj(y), struct_imag, ([0], [1]))
         result_B = sparse.tensordot(x, self.struct, ([0], [0]))
-        if type(result_B) == np.ndarray:
+        if isinstance(result_B, np.ndarray):
             result_B = COO.from_numpy(result_B)
-        if type(result_A) == np.ndarray:
+        if isinstance(result_A, np.ndarray):
             result_A = COO.from_numpy(result_A)
         result = -2 * sparse_imag(sparse.tensordot(result_A, result_B,
                                                    ([0], [1])))
         # We want our result to be dense, to make things predictable from the
         # outside.
-        if type(result) == sparse.coo.COO:
+        if isinstance(result, sparse.coo.COO):
             result = result.todense()
         return result.real
 
@@ -172,7 +172,7 @@ class SparseBasis:
         """
         struct_imag = sparse_imag(self.struct)
         result = 2 * sparse.tensordot(struct_imag, h, ([0], [0])).T
-        if type(result) == sparse.coo.COO:
+        if isinstance(result, sparse.coo.COO):
             result = result.todense()
         return result.real
 

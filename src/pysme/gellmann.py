@@ -5,12 +5,12 @@
   .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
-import numpy as np
 from itertools import product
+import numpy as np
 
 def gellmann(j, k, d):
     r"""Returns a generalized Gell-Mann matrix of dimension d.
-    
+
     According to the convention in *Bloch Vectors for Qubits* by Bertlmann and
     Krammer (2008), returns :math:`\Lambda^j` for :math:`1\leq j=k\leq d-1`,
     :math:`\Lambda^{kj}_s` for :math:`1\leq k<j\leq d`, :math:`\Lambda^{jk}_a`
@@ -52,7 +52,7 @@ def gellmann(j, k, d):
 
 def get_basis(d):
     r"""Return a basis of operators.
-    
+
     The basis is made up of orthogonal Hermitian operators on a Hilbert space
     of dimension d, with the identity element in the last place.
 

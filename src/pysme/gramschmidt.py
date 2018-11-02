@@ -5,13 +5,13 @@
   .. moduleauthor:: Jonathan Gross <jarthurgross@gmail.com>
 
 """
-import numpy as np
 from itertools import product
+import numpy as np
 import pysme.gellmann as gm
 
 def orthonormalize(A):
     """Return an orthonormal basis in which `A` has a sparse representation.
-    
+
     `A` will have support only on the first three elements. The first element
     is guaranteed to be proportional to the identity. This basis is
     constructed using Gram-Schmidt orthogonalization.
@@ -29,17 +29,17 @@ def orthonormalize(A):
     """
 
     d = max(A.shape) # Code won't currently work unless A is square.
-    G = [ [ gm.gellmann(j, k, d) for k in range(1, d + 1) ] for j in
-        range(1, d + 1) ]
+    G = [[gm.gellmann(j, k, d) for k in range(1, d + 1)] for j in
+         range(1, d + 1)]
     ordering = list(product(range(1, d + 1), range(1, d + 1)))
     hermitian = (A + A.conj().T)/2
     antiherm = (A - A.conj().T)/2.j
     hermitian_comps = [np.trace(np.dot(hermitian, G[j - 1][k - 1]))/np.sqrt(2)
-                       if j != d or k!= d else
+                       if j != d or k != d else
                        np.trace(np.dot(hermitian, G[j - 1][k - 1]))/np.sqrt(d)
                        for j, k in ordering]
     antiherm_comps = [np.trace(np.dot(antiherm, G[j - 1][k - 1]))/np.sqrt(2)
-                      if j != d or k!= d else
+                      if j != d or k != d else
                       np.trace(np.dot(antiherm, G[j - 1][k - 1]))/np.sqrt(d)
                       for j, k in ordering]
 
@@ -56,8 +56,8 @@ def orthonormalize(A):
 
     discarded_indices = [ordered_max_comps[-1][0], ordered_max_comps[-2][0]]
 
-    other_vectors = [ [ 0 if n != idx else 1 for n in range(d**2) ] for idx in
-        range(d**2) if not idx in discarded_indices ]
+    other_vectors = [[0 if n != idx else 1 for n in range(d**2)]
+                     for idx in range(d**2) if not idx in discarded_indices]
 
     vector_set = np.array([other_vectors[-1], hermitian_comps, antiherm_comps] +
                           other_vectors[0:-1]).T.real
@@ -67,9 +67,10 @@ def orthonormalize(A):
                                    for elem in np.diag(R)]))
     basis = basis.T
 
-    G_new = [sum([G[j-1][k-1]*coeff/np.sqrt(2) if j != d or k!= d
-                  else G[j-1][k-1]*coeff/np.sqrt(d) for coeff, (j, k)
-                  in zip(vect, ordering)]) for vect in basis]
+    G_new = [sum([G[j-1][k-1]*coeff/np.sqrt(2) if j != d or k != d
+                  else G[j-1][k-1]*coeff/np.sqrt(d)
+                  for coeff, (j, k) in zip(vect, ordering)])
+             for vect in basis]
 
     A_coeffs = [
         np.trace(np.dot(G_new[0], A)),

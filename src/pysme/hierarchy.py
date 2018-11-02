@@ -12,7 +12,6 @@ import pysme.matrix_form as mf
 import pysme.system_builder as sb
 import pysme.sparse_system_builder as ssb
 import pysme.integrate as integ
-import pysme.gellmann as gm
 import pysme.sde as sde
 
 class HierarchyState(list):
@@ -43,13 +42,15 @@ def rho_dot_sqz_hier(rho_hier, c, r, mu, gamma, xi, m_max):
     c_dag = c.conjugate().T
     return np.array([[mf.D(c, get_mn(m, n, rho_hier, m_max)) +
                       xi_star * mf.comm(c, np.sqrt(n + 1) * np.exp(-2.j * mu) *
-                      np.sinh(r) * get_mn(m, n + 1, rho_hier, m_max) +
-                      np.sqrt(n) * np.cosh(r) *
-                      get_mn(m, n - 1, rho_hier, m_max)) +
+                                        np.sinh(r) *
+                                        get_mn(m, n + 1, rho_hier, m_max) +
+                                        np.sqrt(n) * np.cosh(r) *
+                                        get_mn(m, n - 1, rho_hier, m_max)) +
                       xi * mf.comm(np.sqrt(m + 1) * np.exp(2.j * mu) *
-                      np.sinh(r) * get_mn(m + 1, n, rho_hier, m_max) +
-                      np.sqrt(m) * np.cosh(r) *
-                      get_mn(m - 1, n, rho_hier, m_max), c_dag)
+                                   np.sinh(r) *
+                                   get_mn(m + 1, n, rho_hier, m_max) +
+                                   np.sqrt(m) * np.cosh(r) *
+                                   get_mn(m - 1, n, rho_hier, m_max), c_dag)
                       for n in range(m_max + 1)]
                      for m in range(m_max + 1)])
 
@@ -242,11 +243,11 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
                  hom_ang=0, field_state=None):
         super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
         self.G_ind = sparse_basis.make_wiener_linear_matrix(
-                                    np.exp(-1.j * hom_ang) * self.L_vec)
+            np.exp(-1.j * hom_ang) * self.L_vec)
         self.G_re = sparse_basis.make_wiener_linear_matrix(
-                                    np.exp(-1.j * hom_ang) * self.SA_vec)
+            np.exp(-1.j * hom_ang) * self.SA_vec)
         self.G_im = sparse_basis.make_wiener_linear_matrix(
-                                    1.j * np.exp(-1.j * hom_ang) * self.SA_vec)
+            1.j * np.exp(-1.j * hom_ang) * self.SA_vec)
         if field_state is None:
             # If not specified, set initial field state to squeezed vacuum
             field_state = np.zeros(self.n_max + 1, dtype=np.complex)
@@ -334,7 +335,7 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         super().__init__(sparse_basis, n_max, A, xi_fn, S, L, H, r, mu)
         # Operators for the no-jump differential update
         self.F_ind = (self.wp_ind - sparse_basis.make_real_sand_matrix(
-                                                        self.L_vec, self.L_vec))
+            self.L_vec, self.L_vec))
         LSA_vec = sparse_basis.vectorize(np.kron(L.conj().T @ S, self.Asq_pl))
         self.F_re = -sparse_basis.make_wiener_linear_matrix(LSA_vec)
         self.F_im = -sparse_basis.make_wiener_linear_matrix(1.j * LSA_vec)

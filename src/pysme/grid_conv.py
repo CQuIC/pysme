@@ -13,7 +13,7 @@ def l1_norm(vec):
 
 def double_increments(times, U1s, U2s=None):
     r"""Construct longer time and Wiener increments from shorter increments.
-    
+
     Take a list of times (assumed to be evenly spaced) and standard-normal
     random variables used to define the Ito integrals on the intervals and
     return the equivalent lists for doubled time intervals. The new
@@ -67,15 +67,15 @@ def double_increments(times, U1s, U2s=None):
         return new_times, new_U1s, new_U2s
 
 def calc_rate(integrator, rho_0, times, U1s=None, U2s=None):
-    """Calculate the convergence rate for some integrator.
+    r"""Calculate the convergence rate for some integrator.
 
     Parameters
     ----------
-    integrator : 
+    integrator :
         An Integrator object.
     rho_0 : numpy.array
         The initial state of the system
-    times : 
+    times :
         Sequence of times (assumed to be evenly spaced, defining
                         a number of increments divisible by 4).
     U1s : numpy.array(len(times) - 1), optional

@@ -43,8 +43,8 @@ def b_dx_b(G2, k_T_G, G, k_T, rho):
 
     """
     k_rho_dot = np.dot(k_T, rho)
-    return (np.dot(k_T_G, rho) + 2*k_rho_dot**2)*rho + \
-            np.dot(G2 + 2*k_rho_dot*G, rho)
+    return ((np.dot(k_T_G, rho) + 2*k_rho_dot**2)*rho +
+            np.dot(G2 + 2*k_rho_dot*G, rho))
 
 def b_dx_b_tr_dec(G2, rho):
     r"""Same as :func:`b_dx_b`, but for the linear differential equation.
@@ -267,7 +267,7 @@ class Solution:
             time.
 
         """
-        if type(self.basis) == sparse.coo.COO:
+        if isinstance(self.basis, sparse.coo.COO):
             basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
                                    for op in self.basis.todense()])
         else:
@@ -328,7 +328,7 @@ class LindbladIntegrator:
         don't need to calculate from `Ls`, and `H`.
 
     """
-    def __init__(self, Ls, H, basis=None, drift_rep=None, **kwargs):
+    def __init__(self, Ls, H, basis=None, drift_rep=None):
         dim = Ls[0].shape[0]
         self.basis = ssb.SparseBasis(dim, basis)
 
