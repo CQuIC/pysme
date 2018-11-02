@@ -112,7 +112,7 @@ def euler(drift_fn, diffusion_fn, X0, ts, Us):
         A sequence of time points for which to solve for X.  The initial value
         point should be the first element of this sequence.
     Us : array, shape=(len(t) - 1)
-        Normalized Weiner increments for each time step (i.e. samples from a
+        Normalized Wiener increments for each time step (i.e. samples from a
         Gaussian distribution with mean 0 and variance 1).
 
     Returns
@@ -124,7 +124,7 @@ def euler(drift_fn, diffusion_fn, X0, ts, Us):
     """
 
     dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
-    # Scale the Weiner increments to the time increments.
+    # Scale the Wiener increments to the time increments.
     sqrtdts = np.sqrt(dts)
     dWs = np.product(np.array([sqrtdts, Us]), axis=0)
 
@@ -226,7 +226,7 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
         A sequence of time points for which to solve for X.  The initial value
         point should be the first element of this sequence.
     Us : array, shape=(len(t) - 1)
-        Normalized Weiner increments for each time step (i.e. samples from a
+        Normalized Wiener increments for each time step (i.e. samples from a
         Gaussian distribution with mean 0 and variance 1).
 
     Returns
@@ -238,7 +238,7 @@ def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     """
 
     dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
-    # Scale the Weiner increments to the time increments.
+    # Scale the Wiener increments to the time increments.
     sqrtdts = np.sqrt(dts)
     dWs = np.product(np.array([sqrtdts, Us]), axis=0)
 
@@ -373,10 +373,10 @@ def time_ind_taylor_1_5(drift, diffusion, b_dx_b, b_dx_a, a_dx_b, a_dx_a,
         A sequence of time points for which to solve for X.  The initial value
         point should be the first element of this sequence.
     U1s : numpy.array, shape=(len(t) - 1)
-        Normalized Weiner increments for each time step (i.e. samples from a
+        Normalized Wiener increments for each time step (i.e. samples from a
         Gaussian distribution with mean 0 and variance 1).
     U2s : numpy.array, shape=(len(t) - 1)
-        Normalized Weiner increments for each time step (i.e. samples from a
+        Normalized Wiener increments for each time step (i.e. samples from a
         Gaussian distribution with mean 0 and variance 1).
 
     Returns
@@ -441,7 +441,7 @@ def faulty_milstein(drift, diffusion, b_dx_b, X0, ts, Us):
         A sequence of time points for which to solve for X.  The initial value
         point should be the first element of this sequence.
     Us : numpy.array, shape=(len(t) - 1)
-        Normalized Weiner increments for each time step (i.e. samples from a
+        Normalized Wiener increments for each time step (i.e. samples from a
         Gaussian distribution with mean 0 and variance 1).
 
     Returns
@@ -453,7 +453,7 @@ def faulty_milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     """
 
     dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
-    # Scale the Weiner increments to the time increments.
+    # Scale the Wiener increments to the time increments.
     sqrtdts = np.sqrt(dts)
     dWs = np.product(np.array([sqrtdts, Us]), axis=0)
 
