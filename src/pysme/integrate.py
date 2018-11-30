@@ -413,6 +413,51 @@ class UncondLindbladIntegrator(LindbladIntegrator):
                              jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis.basis)
 
+class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
+    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
+        super().__init__(Ls, H, basis, drift_rep, **kwargs)
+        L_meas_vec = self.L_vecs[meas_L_idx]
+        L_meas = Ls[meas_L_idx]
+        Id_vec = self.basis.vectorize(np.eye(L_meas.shape[0]))
+        self.G = 2 * self.basis.make_real_sand_matrix(L_meas_vec, Id_vec)
+        self.k_T = -2 * self.basis.dualize(L_meas).real
+
+    def a_fn(self, rho, t):
+        # TODO: The convention for the order of rho and t is inconsistent
+        # between scipy's solve_ivp and sde's euler, which makes the code
+        # confusing. Should probably modify sde's euler to use scipy's
+        # convention, but should also look at the conventions used by the
+        # stochastic solvers in julia's differential equation library.
+        return self.Q @ rho
+
+    def b_fn(self, rho, t):
+        return (self.k_T @ rho) * rho + self.G @ rho
+
+    def b_fn_tr_non_pres(self, rho, t):
+        return self.G @ rho
+
+    def integrate(self, rho_0, times, U1s=None, U2s=None):
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
+        return Solution(vec_soln, self.basis.basis)
+
+    def integrate_tr_non_pres(self, rho_0, times, U1s=None, U2s=None):
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler(self.a_fn, self.b_fn_tr_non_pres, rho_0_vec, times,
+                             U1s)
+        # TODO: Having a difference between the basis stored by the Lindblad
+        # integrators and that stored by the Gaussian integrators is also not
+        # ideal. Eventually it would be nice for everything to be one of these
+        # Lindblad integrators and have methods for constructing the Gaussian
+        # versions from the relevant Gaussian parameters.
+        return Solution(vec_soln, self.basis.basis)
+
 class JumpLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
         super().__init__(Ls, H, basis, drift_rep, **kwargs)
