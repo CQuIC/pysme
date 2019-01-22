@@ -428,7 +428,7 @@ def test_against_random_spin1_gauss_matrix_euler_test_vector():
 def check_sparse_vectorization(sparse_basis, ops):
     for op in ops:
         op_there_back = sparse_basis.matrize(sparse_basis.vectorize(op))
-        assert_almost_equal(np.abs(op - op_there_back).max(), 0.0, 7)
+        assert_almost_equal(np.abs(op - op_there_back.todense()).max(), 0.0, 7)
 
 def check_sparse_duals(sparse_basis, ops):
     for op1, op2 in it.product(ops, ops):
@@ -445,7 +445,8 @@ def check_sparse_real_sand(sparse_basis, X, rho, Y):
     real_sand_matrix = sparse_basis.make_real_sand_matrix(x_vec, y_vec)
     real_sand_vec = COO.from_numpy(real_sand_matrix @ rho_vec.todense())
     assert_almost_equal(np.abs(dense_real_sand -
-                               sparse_basis.matrize(real_sand_vec)).max(),
+                               sparse_basis.matrize(real_sand_vec).todense())
+                        .max(),
                         0.0, 7)
 
 def check_sparse_real_comm(sparse_basis, X, rho, Y):
@@ -457,7 +458,8 @@ def check_sparse_real_comm(sparse_basis, X, rho, Y):
     real_comm_matrix = sparse_basis.make_real_comm_matrix(x_vec, y_vec)
     real_comm_vec = COO.from_numpy(real_comm_matrix @ rho_vec.todense())
     assert_almost_equal(np.abs(dense_real_comm -
-                               sparse_basis.matrize(real_comm_vec)).max(),
+                               sparse_basis.matrize(real_comm_vec).todense())
+                        .max(),
                         0.0, 7)
 
 def check_sparse_hamil_comm(sparse_basis, H, rho):
@@ -467,7 +469,8 @@ def check_sparse_hamil_comm(sparse_basis, H, rho):
     hamil_comm_matrix = sparse_basis.make_hamil_comm_matrix(h_vec)
     hamil_comm_vec = COO.from_numpy(hamil_comm_matrix @ rho_vec.todense())
     assert_almost_equal(np.abs(dense_hamil_comm -
-                               sparse_basis.matrize(hamil_comm_vec)).max(),
+                               sparse_basis.matrize(hamil_comm_vec).todense())
+                        .max(),
                         0.0, 7)
 
 def check_trivial_construction():
