@@ -387,7 +387,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.Dfun)
-        return Solution(ivp_soln.y.T, self.basis.basis)
+        return Solution(ivp_soln.y.T, self.basis.basis.todense())
 
     def integrate_non_herm(self, rho_0, times, method='BDF'):
         r"""Integrate the equation for a list of times with given initial
@@ -411,7 +411,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
                              (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.Dfun)
-        return Solution(ivp_soln.y.T, self.basis.basis)
+        return Solution(ivp_soln.y.T, self.basis.basis.todense())
 
 class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
@@ -442,7 +442,7 @@ class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
             U1s = np.random.randn(len(times) -1)
 
         vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
-        return Solution(vec_soln, self.basis.basis)
+        return Solution(vec_soln, self.basis.basis.todense())
 
     def integrate_tr_non_pres(self, rho_0, times, U1s=None, U2s=None):
         rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
@@ -456,7 +456,7 @@ class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
         # ideal. Eventually it would be nice for everything to be one of these
         # Lindblad integrators and have methods for constructing the Gaussian
         # versions from the relevant Gaussian parameters.
-        return Solution(vec_soln, self.basis.basis)
+        return Solution(vec_soln, self.basis.basis.todense())
 
 class JumpLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
@@ -516,7 +516,8 @@ class JumpLindbladIntegrator(UncondLindbladIntegrator):
                 rho_0_vec = rho_0_vec / (self.tr_fnctnl @ rho_0_vec)
             else:
                 jump_occurred = False
-        return Solution(np.vstack(vec_soln_segments), self.basis.basis)
+        return Solution(np.vstack(vec_soln_segments),
+                        self.basis.basis.todense())
 
 class GaussIntegrator:
     r"""Template class for Gaussian integrators.
