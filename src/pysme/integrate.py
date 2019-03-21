@@ -7,6 +7,7 @@
 """
 
 from functools import partial
+import itertools as it
 import numpy as np
 from scipy.integrate import solve_ivp
 import sparse
@@ -412,6 +413,89 @@ class UncondLindbladIntegrator(LindbladIntegrator):
                              rho_0_vec, method=method, t_eval=times,
                              jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis.basis.todense())
+
+class UncondTimeDepLindInt(UncondLindbladIntegrator):
+    r"""Integrator for an unconditional Lindblad master equation with
+    time-dependent Hamiltonian and Lindblad operators.
+
+    Parameters
+    ----------
+    Ls : list of [numpy.array, (numpy.array, callable), ...]
+        Collection of Lindblad operators, each expressed as a list whose first
+        element contains the constant part of the operator and whose subsequent
+        elements are pairs whose first element is an operator and whose second
+        element is the time-dependent coefficient of that operator.
+    H : [numpy.array, (numpy.array, callable), ...]
+        The plant Hamiltonian expressed as a list whose first element contains
+        the constant part of the operator and whose subsequent elements are
+        pairs whose first element is an operator and whose second element is the
+        time-dependent coefficient of that operator.
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        time-independent evolution operator. Will save computation time if
+        already known and don't need to calculate from `Ls`, and `H`. Sort of a
+        holdover from the time-independent case right now. Can't imagine it
+        being useful in its current state for the time-dependent case.
+
+    """
+    def __init__(self, Ls, H, basis=None, drift_rep=None):
+        const_Ls = [L_list[0] for L_list in Ls]
+        const_H = H[0]
+        # Build things so self.Q contains the time-independent operator
+        super().__init__(const_Ls, const_H, basis, drift_rep)
+
+        self.time_dep_L_vecs = [[self.basis.vectorize(L) for L, _ in L_list[1:]]
+                                for L_list in Ls]
+
+        self.time_dep_h_vecs = [self.basis.vectorize(H) for H, _ in H[1:]]
+
+        self.linear_time_dep_L_matrices = sum([[
+            self.basis.make_real_comm_matrix(L0, Lj)
+            + self.basis.make_real_comm_matrix(Lj, L0)
+            for Lj in L_vec_list]
+            for L_vec_list, L0 in zip(self.time_dep_L_vecs, self.L_vecs)],
+            [])
+
+        self.linear_time_dep_L_fns = sum([[fn for _, fn in L_list[1:]]
+                                          for L_list in Ls],
+                                          [])
+
+        self.quad_time_dep_L_matrices = sum([[
+            self.basis.make_real_comm_matrix(Lj, Lk)
+            for Lj, Lk in it.product(L_vec_list, repeat=2)]
+            for L_vec_list in self.time_dep_L_vecs],
+            [])
+
+        self.quad_time_dep_L_fns = sum([[
+            lambda t: f1(t)*f2(t)
+            for (_, f1), (_, f2) in it.product(L_list[1:], repeat=2)]
+            for L_list in Ls],
+            [])
+
+        self.time_dep_h_matrices = [self.basis.make_hamil_comm_matrix(h_vec)
+                                    for h_vec in self.time_dep_h_vecs]
+
+        self.time_dep_h_fns = [fn for _, fn in H[1:]]
+
+        self.time_dep_matrices = (self.linear_time_dep_L_matrices
+                                  + self.quad_time_dep_L_matrices
+                                  + self.time_dep_h_matrices)
+
+        self.time_dep_fns = (self.linear_time_dep_L_fns
+                             + self.quad_time_dep_L_fns
+                             + self.time_dep_h_fns)
+
+    def Dfun(self, t, rho):
+        return self.Q + sum([fn(t)*matrix
+                             for fn, matrix in zip(self.time_dep_fns,
+                                                   self.time_dep_matrices)])
+
+    def a_fn(self, t, rho):
+        return np.dot(self.Dfun(t, rho), rho)
 
 class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
