@@ -26,15 +26,16 @@ class SparseBasis:
     def __init__(self, dim, basis=None):
         if basis is None:
             self.dim = dim
-            basis = gm.get_basis(dim)
+            self.basis = sparse.stack(gm.get_basis(dim, sparse=True))
         else:
             self.dim = basis[0].shape[0]
-        self.basis = COO.from_numpy(np.array(basis))
+            self.basis = COO.from_numpy(np.array(basis))
         # Diagonal metric (since we're working with what are assumed to be
         # orthogonal but not necessarily normalized basis vectors)
-        self.sq_norms = COO.from_numpy(np.einsum('jmn,jnm->j',
-                                                 self.basis.todense(),
-                                                 self.basis.todense()))
+        self.sq_norms = COO.from_numpy(
+                sparse.tensordot(
+                    self.basis, self.basis,
+                    ([1, 2], [2, 1])).to_scipy_sparse().diagonal())
         # Diagonal inverse metric
         sq_norms_inv = COO.from_numpy(1 / self.sq_norms.todense())
         # Dual basis obtained from the original basis by the inverse metric
