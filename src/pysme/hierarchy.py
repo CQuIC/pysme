@@ -103,11 +103,17 @@ def load_hierarchy_solution(infile):
                              loaded['d_sys'])
 
 class HierarchyIntegratorFactory():
-    def __init__(self, d_sys, n_max):
+    def __init__(self, d_sys, n_max, sparse_basis=None):
+        '''sparse_basis should be a SparseBasis object from sparse_system_builder.
+
+        '''
         self.d_sys = d_sys
         self.n_max = n_max
         self.d_total = (self.n_max + 1) * self.d_sys
-        self.sparse_basis = ssb.SparseBasis(self.d_total)
+        if sparse_basis is None:
+            self.sparse_basis = ssb.SparseBasis(self.d_total)
+        else:
+            self.sparse_basis = sparse_basis
         self.A = np.zeros((self.n_max + 1, self.n_max + 1),
                           dtype=np.complex)
         for n in range(n_max):
