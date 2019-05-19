@@ -542,6 +542,53 @@ class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
         # versions from the relevant Gaussian parameters.
         return Solution(vec_soln, self.basis.basis.todense())
 
+    def gen_meas_record(self, rho_0, times, U1s=None):
+        r"""Simulate a measurement record.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise), returning a measurement record along
+        with the trajectory.
+
+        The incremental measurement outcomes making up the measurement record
+        are related to the white noise increments and instantaneous state in
+        the following way:
+
+        .. math::
+
+           dM_t=dW_t-\operatorname{tr}[(c+c^\dagger)\rho_t]
+
+        Parameters
+        ----------
+        rho_0 : numpy.array of complex float
+            The initial state of the system as a Hermitian matrix
+        times : numpy.array of real float
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array of real float
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories. ``U1s.shape`` is
+            assumed to be ``(len(times) - 1,)``.
+
+        Returns
+        -------
+        tuple of Solution and numpy.array
+            The components of the vecorized :math:`\rho` for all specified
+            times and an array of incremental measurement outcomes
+
+        """
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        soln = self.integrate(rho_0, times, U1s)
+
+        dts = times[1:] - times[:-1]
+        dWs = np.sqrt(dts) * U1s
+        tr_c_c_rs = np.array([-np.dot(self.k_T, rho_vec)
+                              for rho_vec in soln.vec_soln[:-1]])
+        dMs = dWs + tr_c_c_rs * dts
+
+        return soln, dMs
+
 class JumpLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
         super().__init__(Ls, H, basis, drift_rep, **kwargs)
