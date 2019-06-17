@@ -647,8 +647,9 @@ class JumpLindbladIntegrator(UncondLindbladIntegrator):
                 rho_0_vec = rho_0_vec / (self.tr_fnctnl @ rho_0_vec)
             else:
                 jump_occurred = False
-        return Solution(np.vstack(vec_soln_segments),
+        soln = Solution(np.vstack(vec_soln_segments),
                         self.basis.basis.todense())
+        return (soln, meas_rec) if return_meas_rec else soln
 
 class GaussIntegrator:
     r"""Template class for Gaussian integrators.
