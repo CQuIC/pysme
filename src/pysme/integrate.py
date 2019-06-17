@@ -624,7 +624,7 @@ class JumpLindbladIntegrator(UncondLindbladIntegrator):
         start_idx = 0
         vec_soln_segments = []
         jump_occurred = True
-        while jump_occurred:
+        while jump_occurred and start_idx < len(times) - 1:
             try:
                 jump_threshold = next(jump_thresholds)
             except StopIteration:
