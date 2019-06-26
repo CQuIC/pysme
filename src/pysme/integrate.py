@@ -239,7 +239,7 @@ class Solution:
         self.vec_soln = vec_soln
         self.basis = basis
 
-    def get_expectations(self, observable, hermitian=True):
+    def get_expectations(self, observable, idx_slice=None, hermitian=True):
         r"""Calculate the expectation value of an observable for all times.
 
         Returns
@@ -253,12 +253,14 @@ class Solution:
         # used for calculating traces with the adjoint of the operator, so I
         # need to preemptively adjoint here. This becomes important when taking
         # traces with non-hermitial observables.
+        if idx_slice is None:
+            idx_slice = np.s_[:]
         dual = sb.dualize(observable.conj().T, self.basis)
         if hermitian:
             dual = dual.real
-        return np.dot(self.vec_soln, dual)
+        return np.dot(self.vec_soln[idx_slice], dual)
 
-    def get_purities(self):
+    def get_purities(self, idx_slice=None):
         r"""Calculate the purity of the state for all times.
 
         Returns
@@ -268,15 +270,17 @@ class Solution:
             time.
 
         """
+        if idx_slice is None:
+            idx_slice = np.s_[:]
         if isinstance(self.basis, sparse.coo.COO):
             basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
                                    for op in self.basis.todense()])
         else:
             basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
                                    for op in self.basis])
-        return np.dot(self.vec_soln**2, basis_dual)
+        return np.dot(self.vec_soln[idx_slice]**2, basis_dual)
 
-    def get_density_matrices(self):
+    def get_density_matrices(self, idx_slice=None):
         r"""Represent the solution as a sequence of Hermitian arrays.
 
         Returns
@@ -285,7 +289,9 @@ class Solution:
             The density matrix at each calculated time.
 
         """
-        return np.einsum('jk,kmn->jmn', self.vec_soln, self.basis)
+        if idx_slice is None:
+            idx_slice = np.s_[:]
+        return np.einsum('jk,kmn->jmn', self.vec_soln[idx_slice], self.basis)
 
     def get_density_matrices_slow(self):
         r"""Represent the solution as a sequence of Hermitian arrays.
