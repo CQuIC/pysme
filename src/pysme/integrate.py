@@ -330,7 +330,7 @@ class LindbladIntegrator:
 
     """
     def __init__(self, Ls, H, basis=None, drift_rep=None):
-        dim = Ls[0].shape[0]
+        dim = H.shape[0]
         self.basis = ssb.SparseBasis(dim, basis)
 
         if drift_rep is None:
