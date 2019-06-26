@@ -85,6 +85,12 @@ class HierarchySolution(integ.Solution):
     def get_purities(self, field_rho_0):
         raise NotImplementedError()
 
+    def get_hierarchy_expectations(self, observable, hermitian=True):
+        return super().get_expectations(observable, hermitian)
+
+    def get_hierarchy_density_matrices(self):
+        return super().get_density_matrices()
+
     def get_density_matrices(self, field_rho_0):
         raise NotImplementedError()
 
