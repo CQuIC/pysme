@@ -83,7 +83,8 @@ class HierarchySolution(integ.Solution):
         return super().get_expectations(hier_obs, hermitian)
 
     def get_purities(self, field_rho_0):
-        raise NotImplementedError()
+        phys_soln = self.get_phys_soln(field_rho_0)
+        return phys_soln.get_purities()
 
     def get_hierarchy_expectations(self, observable, hermitian=True):
         return super().get_expectations(observable, hermitian)
@@ -92,7 +93,8 @@ class HierarchySolution(integ.Solution):
         return super().get_density_matrices()
 
     def get_density_matrices(self, field_rho_0):
-        raise NotImplementedError()
+        phys_soln = self.get_phys_soln(field_rho_0)
+        return phys_soln.get_density_matrices()
 
     def save(self, outfile):
         np.savez_compressed(outfile, vec_soln=self.vec_soln,
