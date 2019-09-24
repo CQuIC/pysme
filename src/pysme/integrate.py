@@ -268,7 +268,7 @@ class Solution:
             time.
 
         """
-        if isinstance(self.basis, sparse.coo.COO):
+        if isinstance(self.basis, sparse.COO):
             basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
                                    for op in self.basis.todense()])
         else:
