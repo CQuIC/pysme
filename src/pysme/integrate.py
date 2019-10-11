@@ -281,7 +281,7 @@ class Solution:
         """
         if idx_slice is None:
             idx_slice = np.s_[:]
-        if isinstance(self.basis, sparse.coo.COO):
+        if isinstance(self.basis, sparse.COO):
             basis_dual = np.array([np.trace(np.dot(op.conj().T, op)).real
                                    for op in self.basis.todense()])
         else:

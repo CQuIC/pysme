@@ -59,7 +59,7 @@ class SparseBasis:
             # I want the result stored in a sparse format even if it isn't
             # sparse.
             result = COO.from_numpy(result)
-        elif dense and isinstance(result, sparse.coo.COO):
+        elif dense and isinstance(result, sparse.COO):
             result = result.todense()
         return result
 
@@ -71,7 +71,7 @@ class SparseBasis:
             # I want the result stored in a sparse format even if it isn't
             # sparse.
             result = COO.from_numpy(result)
-        elif dense and isinstance(result, sparse.coo.COO):
+        elif dense and isinstance(result, sparse.COO):
             result = result.todense()
         return result
 
@@ -109,7 +109,7 @@ class SparseBasis:
         result = sparse_real(sparse.tensordot(result_A, result_B, ([0], [1])))
         # We want our result to be dense, to make things predictable from the
         # outside.
-        if isinstance(result, sparse.coo.COO):
+        if isinstance(result, sparse.COO):
             result = result.todense()
         return result.real
 
@@ -143,7 +143,7 @@ class SparseBasis:
                                                    ([0], [1])))
         # We want our result to be dense, to make things predictable from the
         # outside.
-        if isinstance(result, sparse.coo.COO):
+        if isinstance(result, sparse.COO):
             result = result.todense()
         return result.real
 
@@ -173,7 +173,7 @@ class SparseBasis:
         """
         struct_imag = sparse_imag(self.struct)
         result = 2 * sparse.tensordot(struct_imag, h, ([0], [0])).T
-        if isinstance(result, sparse.coo.COO):
+        if isinstance(result, sparse.COO):
             result = result.todense()
         return result.real
 

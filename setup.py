@@ -4,7 +4,7 @@ requires = [
         'Cython',
         'numpy >= 1.13',
         'scipy',
-        'sparse',
+        'sparse >= 0.8',
          ]
 
 setup(name='pysme',
