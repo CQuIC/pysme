@@ -16,6 +16,15 @@ import pysme.sparse_system_builder as ssb
 import pysme.sde as sde
 import pysme.gellmann as gm
 
+def process_default_kwargs(kwargs, default_kwargs):
+    """Update a default kwarg dict with user-supplied values
+
+    """
+    if kwargs is None:
+        kwargs = {}
+    for kwarg, value in kwargs.items():
+        default_kwargs[kwarg] = value
+
 def b_dx_b(G2, k_T_G, G, k_T, rho):
     r"""A term in Taylor integration methods.
 
@@ -376,7 +385,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
     def Dfun(self, t, rho):
         return self.Q
 
-    def integrate(self, rho_0, times, method='BDF'):
+    def integrate(self, rho_0, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
         conditions.
 
@@ -384,19 +393,23 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         :type rho_0:    `numpy.array`
         :param times:   A sequence of time points for which to solve for rho
         :type times:    `list(real)`
+        :param solve_ivp_kwargs:    kwargs for scipy.integrate.solve_ivp
+        :type solve_ivp_kwargs:     dict
         :returns:       The components of the vecorized :math:`\rho` for all
                         specified times
         :rtype:         `Solution`
 
         """
         rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
-        ivp_soln = solve_ivp(self.a_fn,
-                             (times[0], times[-1]),
-                             rho_0_vec, method=method, t_eval=times,
-                             jac=self.Dfun)
+        default_solve_ivp_kwargs = {'method': 'BDF',
+                                    't_eval': times,
+                                    'jac': self.Dfun}
+        process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
+                             **default_solve_ivp_kwargs)
         return Solution(ivp_soln.y.T, self.basis.basis.todense())
 
-    def integrate_non_herm(self, rho_0, times, method='BDF'):
+    def integrate_non_herm(self, rho_0, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
         conditions that may be non hermitian (useful for applications involving
         the quantum regression theorem).
@@ -405,19 +418,20 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         :type rho_0:    `numpy.array`
         :param times:   A sequence of time points for which to solve for rho
         :type times:    `list(real)`
-        :param method:  The integration method for `scipy.integrate.solve_ivp`
-                        to use.
-        :type method:   String
+        :param solve_ivp_kwargs:    kwargs for scipy.integrate.solve_ivp
+        :type solve_ivp_kwargs:     dict
         :returns:       The components of the vecorized :math:`\rho` for all
                         specified times
         :rtype:         `Solution`
 
         """
         rho_0_vec = self.basis.vectorize(rho_0, dense=True)
-        ivp_soln = solve_ivp(self.a_fn,
-                             (times[0], times[-1]),
-                             rho_0_vec, method=method, t_eval=times,
-                             jac=self.Dfun)
+        default_solve_ivp_kwargs = {'method': 'BDF',
+                                    't_eval': times,
+                                    'jac': self.Dfun}
+        process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
+                             **default_solve_ivp_kwargs)
         return Solution(ivp_soln.y.T, self.basis.basis.todense())
 
 class UncondTimeDepLindInt(UncondLindbladIntegrator):
