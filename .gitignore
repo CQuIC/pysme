@@ -7,3 +7,4 @@ src/pysme.egg-info/*
 *.pyc
 doc/_build/*
 __pycache__/*
+.ipynb_checkpoints
