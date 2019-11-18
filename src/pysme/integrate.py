@@ -300,7 +300,7 @@ class Solution:
         """
         if idx_slice is None:
             idx_slice = np.s_[:]
-        return np.einsum('jk,kmn->jmn', self.vec_soln[idx_slice], self.basis)
+        return np.tensordot(self.vec_soln[idx_slice], self.basis, ([-1], [0]))
 
     def get_density_matrices_slow(self):
         r"""Represent the solution as a sequence of Hermitian arrays.
