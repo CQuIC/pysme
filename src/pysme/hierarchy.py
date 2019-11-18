@@ -98,12 +98,12 @@ class HierarchySolution(integ.Solution):
     def get_hierarchy_expectations(self, observable, hermitian=True):
         return super().get_expectations(observable, hermitian)
 
-    def get_hierarchy_density_matrices(self):
-        return super().get_density_matrices()
+    def get_hierarchy_density_matrices(self, idx_slice=None):
+        return super().get_density_matrices(idx_slice)
 
-    def get_density_matrices(self, field_rho_0):
+    def get_density_matrices(self, field_rho_0, idx_slice=None):
         phys_soln = self.get_phys_soln(field_rho_0)
-        return phys_soln.get_density_matrices()
+        return phys_soln.get_density_matrices(idx_slice)
 
     def save(self, outfile):
         np.savez_compressed(outfile, vec_soln=self.vec_soln,
