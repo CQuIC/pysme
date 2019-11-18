@@ -195,7 +195,7 @@ class WavepacketUncondIntegrator:
         return (self.wp_ind + xi_t.real * self.wp_re + xi_t.imag * self.wp_im +
                 np.abs(xi_t)**2 * self.wp_abs)
 
-    def integrate(self, rho_0, times, method='BDF'):
+    def integrate(self, rho_0, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
         conditions.
 
@@ -208,13 +208,16 @@ class WavepacketUncondIntegrator:
         :rtype:         `Solution`
 
         """
+        default_solve_ivp_kwargs = {'method': 'BDF',
+                                    't_eval': times,
+                                    'jac': lambda t, rho: self.Dfun(t)}
+        process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
                                                        dtype=np.complex)),
                                  self.basis).real
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
-                             (times[0], times[-1]),
-                             rho_0_vec, method=method, t_eval=times,
-                             jac=lambda t, rho: self.Dfun(t))
+                             (times[0], times[-1]), rho_0_vec,
+                              **default_solve_ivp_kwargs)
         return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
     def integrate_vec_init_cond(self, rho_0_vec, times):
