@@ -1,7 +1,6 @@
 from setuptools import setup
 
 requires = [
-        'Cython',
         'numpy >= 1.13',
         'scipy',
         'sparse >= 0.8',
