@@ -1453,3 +1453,50 @@ class IntegratorFactory:
         """
         constructor_kwargs = self.parameter_fn(params, self.precomp_data)
         return self.IntClass(**constructor_kwargs)
+
+class QuasiMarkoff2LvlIntegrator(UncondLindbladIntegrator):
+    '''Delta_AL = omega_A - omega_L
+
+    '''
+    def __init__(self, gamma, N_A, N_Om, M_A, M_Om, Delta_AL, Omega, phi_L, F_A, G_A):
+        dim = 2
+        basis = ssb.SparseBasis(dim)
+        self.basis = basis
+        sx = np.array([[0, 1], [1, 0]], dtype=np.complex)
+        sy = np.array([[0, -1j], [1j, 0]], dtype=np.complex)
+        sz = np.array([[1, 0], [0, -1]], dtype=np.complex)
+        sp = (sx + 1j*sy)/2
+        sm = (sx - 1j*sy)/2
+        Sm = sm*np.exp(-1j*phi_L)
+        Sp = sp*np.exp(1j*phi_L)
+        Y = 1j*sz@(Sp + Sm)
+        sz_vec = self.basis.vectorize(sz)
+        Sm_vec = self.basis.vectorize(Sm)
+        Sp_vec = self.basis.vectorize(Sp)
+        Y_vec = self.basis.vectorize(Y)
+        H_vec = ((Omega/2 + 1j*F_A)*(Sp_vec + Sm_vec)
+                 + (Delta_AL/2)*sz_vec + G_A*Y_vec)
+
+        self.Q = -gamma/4*(
+                (1 + N_A)*(basis.make_double_comm_matrix(Sm_vec, 1)
+                           - 2*basis.make_diff_op_matrix(Sm_vec))
+                + N_A*(basis.make_double_comm_matrix(Sp_vec, 1)
+                       - 2*basis.make_diff_op_matrix(Sp_vec))
+                + (1 + N_Om)*(-basis.make_double_comm_matrix(Sm_vec, 1)
+                            - 2*basis.make_diff_op_matrix(Sm_vec))
+                + N_Om*(-basis.make_double_comm_matrix(Sp_vec, 1)
+                        - 2*basis.make_diff_op_matrix(Sp_vec))
+                - 2*basis.make_double_comm_matrix(Sm_vec, M_A*np.exp(-2j*phi_L))
+                + 2*basis.make_real_comm_matrix(M_A*np.exp(-2j*phi_L)*Sp_vec,
+                                                Sp_vec)
+                + 2*basis.make_real_comm_matrix(M_A.conj()*np.exp(2j*phi_L)
+                                                *Sm_vec, Sm_vec)
+                - 2*basis.make_double_comm_matrix(Sm_vec,
+                                                  M_Om*np.exp(-2j*phi_L))
+                - 2*basis.make_real_comm_matrix(M_Om*np.exp(-2j*phi_L)*Sp_vec,
+                                                Sp_vec)
+                - 2*basis.make_real_comm_matrix(M_Om.conj()*np.exp(2j*phi_L)
+                                                *Sm_vec, Sm_vec))
+        self.Q += basis.make_hamil_comm_matrix(H_vec)
+        self.Q += -2*basis.make_real_sand_matrix(F_A*(Sp_vec - Sm_vec), sz_vec)
+        self.Q += -2*basis.make_real_sand_matrix(G_A*(Sp_vec + Sm_vec), sz_vec)
