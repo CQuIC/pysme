@@ -87,16 +87,18 @@ class HierarchySolution(integ.Solution):
                                     self.basis).real / sb.norm_squared(basis_el)
                          for basis_el in self.basis_sys])
 
-    def get_expectations(self, observable, field_rho_0, hermitian=True):
+    def get_expectations(self, observable, field_rho_0, idx_slice=None, hermitian=True):
         hier_obs = np.kron(observable, field_rho_0)
-        return super().get_expectations(hier_obs, hermitian)
+        return super().get_expectations(hier_obs, idx_slice=idx_slice,
+                                        hermitian=hermitian)
 
     def get_purities(self, field_rho_0):
         phys_soln = self.get_phys_soln(field_rho_0)
         return phys_soln.get_purities()
 
-    def get_hierarchy_expectations(self, observable, hermitian=True):
-        return super().get_expectations(observable, hermitian)
+    def get_hierarchy_expectations(self, observable, idx_slice=None, hermitian=True):
+        return super().get_expectations(observable, idx_slice=idx_slice,
+                                        hermitian=hermitian)
 
     def get_hierarchy_density_matrices(self, idx_slice=None):
         return super().get_density_matrices(idx_slice)
