@@ -236,7 +236,7 @@ class WavepacketUncondIntegrator:
         vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
         return HierarchySolution(vec_soln, self.basis, self.d_sys)
 
-    def integrate_hier_init_cond(self, rho_0_hier, times, method='BDF'):
+    def integrate_hier_init_cond(self, rho_0_hier, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
         conditions, expressed as a full hierarchy density matrix rather than
         only a system density matrix. Handles non-hermitian initial conditions
@@ -257,11 +257,13 @@ class WavepacketUncondIntegrator:
         :rtype:              `Solution`
 
         """
+        default_solve_ivp_kwargs = {'method': 'BDF',
+                                    't_eval': times,
+                                    'jac': lambda t, rho: self.Dfun(t)}
         rho_0_vec = sb.vectorize(rho_0_hier, self.basis)
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
-                             (times[0], times[-1]),
-                             rho_0_vec, method=method, t_eval=times,
-                             jac=lambda t, rho: self.Dfun(t))
+                             (times[0], times[-1]), rho_0_vec,
+                             **default_solve_ivp_kwargs)
         return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
 class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
