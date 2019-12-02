@@ -761,7 +761,7 @@ class UncondGaussIntegrator(GaussIntegrator):
                              jac=self.Dfun)
         return Solution(ivp_soln.y.T, self.basis)
 
-    def integrate_non_herm(self, rho_0, times, method='BDF'):
+    def integrate_non_herm(self, rho_0, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
         conditions that may be non hermitian (useful for applications involving
         the quantum regression theorem).
@@ -779,10 +779,13 @@ class UncondGaussIntegrator(GaussIntegrator):
 
         """
         rho_0_vec = sb.vectorize(rho_0, self.basis)
+        default_solve_ivp_kwargs = {'method': 'BDF',
+                                    't_eval': times,
+                                    'jac': self.Dfun}
+        process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
         ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
                              (times[0], times[-1]),
-                             rho_0_vec, method=method, t_eval=times,
-                             jac=self.Dfun)
+                             rho_0_vec, **default_solve_ivp_kwargs)
         return Solution(ivp_soln.y.T, self.basis)
 
 class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
