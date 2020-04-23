@@ -4,6 +4,7 @@ requires = [
         'numpy >= 1.13',
         'scipy',
         'sparse >= 0.8',
+        'tqdm',
          ]
 
 setup(name='pysme',
