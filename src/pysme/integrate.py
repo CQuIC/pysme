@@ -440,11 +440,20 @@ class UncondTimeDepLindInt(UncondLindbladIntegrator):
 
     Parameters
     ----------
-    Ls : list of [numpy.array, (numpy.array, callable), ...]
+    Ls : list of lists of form [numpy.array, (numpy.array, callable), ...]
         Collection of Lindblad operators, each expressed as a list whose first
         element contains the constant part of the operator and whose subsequent
         elements are pairs whose first element is an operator and whose second
         element is the time-dependent coefficient of that operator.
+
+        E.g., a Lindblad operator expressed algebraically as
+
+        L_j = sum_m f_{j,m}(t) L_{j,m}
+
+        is put into the list form
+
+        [L_{j,0}, (L_{j,1}, f_{j,1}), ...]
+
     H : [numpy.array, (numpy.array, callable), ...]
         The plant Hamiltonian expressed as a list whose first element contains
         the constant part of the operator and whose subsequent elements are
@@ -463,56 +472,95 @@ class UncondTimeDepLindInt(UncondLindbladIntegrator):
 
     """
     def __init__(self, Ls, H, basis=None, drift_rep=None):
-        const_Ls = [L_list[0] for L_list in Ls]
-        const_H = H[0]
-        # Build things so self.Q contains the time-independent operator
-        super().__init__(const_Ls, const_H, basis, drift_rep)
+        if type(H[0]) is not tuple:
+            zero = np.zeros(H[0].shape, dtype=np.complex)
+        else:
+            zero = np.zeros(H[0][0].shape, dtype=np.complex)
+        super().__init__([], zero, basis, drift_rep)
 
-        self.time_dep_L_vecs = [[self.basis.vectorize(L) for L, _ in L_list[1:]]
-                                for L_list in Ls]
+        self.time_dep_L_vecs = []
+        self.time_dep_L_coeffs = []
+        # Loop over different Lindblad operators
+        for L in Ls:
+            lvecs = []
+            fs = []
+            if type(L[0]) is not tuple:
+                lvecs.append(self.basis.vectorize(L[0]))
+                fs.append(lambda x: 1)
+                for k in L[1:]:
+                    lvecs.append(self.basis.vectorize(k[0]))
+                    fs.append(k[1])
+            else:
+                for k in L:
+                    lvecs.append(self.basis.vectorize(k[0]))
+                    fs.append(k[1])
+            self.time_dep_L_vecs.append(lvecs)
+            self.time_dep_L_coeffs.append(fs)
 
-        self.time_dep_h_vecs = [self.basis.vectorize(H) for H, _ in H[1:]]
+        
+        self.diagonal_L_supops = [[self.basis.make_real_comm_matrix(lvec, lvec)
+                                   for lvec in lvecs]
+                                  for lvecs in self.time_dep_L_vecs]
 
-        self.linear_time_dep_L_matrices = sum([[
-            self.basis.make_real_comm_matrix(L0, Lj)
-            + self.basis.make_real_comm_matrix(Lj, L0)
-            for Lj in L_vec_list]
-            for L_vec_list, L0 in zip(self.time_dep_L_vecs, self.L_vecs)],
-            [])
+        self.re_off_diag_L_supops = [[self.basis.make_real_comm_matrix(lvec1, lvec2)
+                                      + self.basis.make_real_comm_matrix(lvec2, lvec1)
+                                      for lvec1, lvec2 in it.combinations(lvecs, 2)]
+                                     for lvecs in self.time_dep_L_vecs]
 
-        self.linear_time_dep_L_fns = sum([[fn for _, fn in L_list[1:]]
-                                          for L_list in Ls],
-                                          [])
+        self.im_off_diag_L_supops = [[self.basis.make_real_comm_matrix(1.j*lvec1, lvec2)
+                                      + self.basis.make_real_comm_matrix(lvec2, 1.j*lvec1)
+                                      for lvec1, lvec2 in it.combinations(lvecs, 2)]
+                                     for lvecs in self.time_dep_L_vecs]
 
-        self.quad_time_dep_L_matrices = sum([[
-            self.basis.make_real_comm_matrix(Lj, Lk)
-            for Lj, Lk in it.product(L_vec_list, repeat=2)]
-            for L_vec_list in self.time_dep_L_vecs],
-            [])
+        self.time_dep_H_supops = []
+        self.time_dep_H_coeffs = []
+        # Loop over different H factors
+        if type(H[0]) is not tuple:
+            hvec = self.basis.vectorize(H[0])
+            self.time_dep_H_supops.append(self.basis.make_hamil_comm_matrix(hvec))
+            self.time_dep_H_coeffs.append(lambda x: 1)
+            for k in H[1:]:
+                hvec = self.basis.vectorize(k[0])
+                self.time_dep_H_supops.append(self.basis.make_hamil_comm_matrix(hvec))
 
-        self.quad_time_dep_L_fns = sum([[
-            lambda t: f1(t)*f2(t)
-            for (_, f1), (_, f2) in it.product(L_list[1:], repeat=2)]
-            for L_list in Ls],
-            [])
-
-        self.time_dep_h_matrices = [self.basis.make_hamil_comm_matrix(h_vec)
-                                    for h_vec in self.time_dep_h_vecs]
-
-        self.time_dep_h_fns = [fn for _, fn in H[1:]]
-
-        self.time_dep_matrices = (self.linear_time_dep_L_matrices
-                                  + self.quad_time_dep_L_matrices
-                                  + self.time_dep_h_matrices)
-
-        self.time_dep_fns = (self.linear_time_dep_L_fns
-                             + self.quad_time_dep_L_fns
-                             + self.time_dep_h_fns)
+                self.time_dep_H_coeffs.append(k[1])
+        else:
+            for k in H:
+                hvec = self.basis.vectorize(k[0])
+                self.time_dep_H_supops.append(self.basis.make_hamil_comm_matrix(hvec))
+                self.time_dep_H_coeffs.append(k[1])
 
     def Dfun(self, t, rho):
-        return self.Q + sum([fn(t)*matrix
-                             for fn, matrix in zip(self.time_dep_fns,
-                                                   self.time_dep_matrices)])
+        # Need |f_{j,m}(t)|^2
+        abs_coeffs = [[np.abs(fn(t))**2 for fn in fs] for fs in self.time_dep_L_coeffs]
+        diag_supop = sum([sum([coeff*supop for coeff, supop in zip(coeff_list, supop_list)])
+                          for coeff_list, supop_list in zip(abs_coeffs, self.diagonal_L_supops)])
+
+        # Need re and im parts of f_{j,m}(t) f_{j,n}(t)^*
+        re_coeffs = []
+        im_coeffs = []
+        for fn_list in self.time_dep_L_coeffs:
+            re_coeff_list = []
+            im_coeff_list = []
+            for fn1, fn2 in it.combinations(fn_list, 2):
+                coeff_val = fn1(t)*np.conj(fn2(t))
+                re_coeff_list.append(np.real(coeff_val))
+                im_coeff_list.append(np.imag(coeff_val))
+            re_coeffs.append(re_coeff_list)
+            im_coeffs.append(im_coeff_list)
+
+        re_off_diag_supop = sum([sum([coeff*supop for coeff, supop in zip(coeff_list, supop_list)])
+                                for coeff_list, supop_list
+                                in zip(re_coeffs, self.re_off_diag_L_supops)])
+
+        im_off_diag_supop = sum([sum([coeff*supop for coeff, supop in zip(coeff_list, supop_list)])
+                                for coeff_list, supop_list
+                                in zip(im_coeffs, self.im_off_diag_L_supops)])
+
+        H_supop = sum([fn(t)*supop for fn, supop
+                       in zip(self.time_dep_H_coeffs, self.time_dep_H_supops)])
+
+        return diag_supop + re_off_diag_supop + im_off_diag_supop + H_supop
 
     def a_fn(self, t, rho):
         return np.dot(self.Dfun(t, rho), rho)
