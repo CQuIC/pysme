@@ -161,6 +161,14 @@ class HierarchyIntegratorFactory():
                                              self.A, xi_fn, S, L, H, r, mu,
                                              field_state)
 
+class HierarchyIntegratorFactoryExpCutoff(HierarchyIntegratorFactory):
+    def __init__(self, d_sys, n_max, decay_const, sparse_basis=None):
+        super().__init__(d_sys, n_max, sparse_basis=sparse_basis)
+        self.A = np.zeros((self.n_max + 1, self.n_max + 1),
+                          dtype=np.complex)
+        for n in range(n_max):
+            self.A[n, n+1] = np.sqrt(n + 1)*np.exp(-n/decay_const)
+
 class WavepacketUncondIntegrator:
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0):
         self.basis = sparse_basis.basis.todense()
