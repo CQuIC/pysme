@@ -357,8 +357,8 @@ class LindbladIntegrator:
         else:
             self.Q = drift_rep
 
-    def a_fn(self, t, rho):
-        return np.dot(self.Q, rho)
+    def a_fn(self, t, rho_vec):
+        return np.dot(self.Q, rho_vec)
 
     def integrate(self, rho_0, times):
         raise NotImplementedError()
@@ -382,7 +382,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         don't need to calculate from `Ls`, and `H`.
 
     """
-    def Dfun(self, t, rho):
+    def jac(self, t, rho_vec):
         return self.Q
 
     def integrate(self, rho_0, times, solve_ivp_kwargs=None):
@@ -403,7 +403,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
         default_solve_ivp_kwargs = {'method': 'BDF',
                                     't_eval': times,
-                                    'jac': self.Dfun}
+                                    'jac': self.jac}
         process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
         ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
                              **default_solve_ivp_kwargs)
@@ -428,7 +428,7 @@ class UncondLindbladIntegrator(LindbladIntegrator):
         rho_0_vec = self.basis.vectorize(rho_0, dense=True)
         default_solve_ivp_kwargs = {'method': 'BDF',
                                     't_eval': times,
-                                    'jac': self.Dfun}
+                                    'jac': self.jac}
         process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
         ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
                              **default_solve_ivp_kwargs)
@@ -530,7 +530,7 @@ class UncondTimeDepLindInt(UncondLindbladIntegrator):
                 self.time_dep_H_supops.append(self.basis.make_hamil_comm_matrix(hvec))
                 self.time_dep_H_coeffs.append(k[1])
 
-    def Dfun(self, t, rho):
+    def jac(self, t, rho_vec):
         # Need |f_{j,m}(t)|^2
         abs_coeffs = [[np.abs(fn(t))**2 for fn in fs] for fs in self.time_dep_L_coeffs]
         diag_supop = sum([sum([coeff*supop for coeff, supop in zip(coeff_list, supop_list)])
@@ -562,8 +562,8 @@ class UncondTimeDepLindInt(UncondLindbladIntegrator):
 
         return diag_supop + re_off_diag_supop + im_off_diag_supop + H_supop
 
-    def a_fn(self, t, rho):
-        return np.dot(self.Dfun(t, rho), rho)
+    def a_fn(self, t, rho_vec):
+        return np.dot(self.jac(t, rho_vec), rho_vec)
 
 class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
@@ -574,19 +574,14 @@ class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
         self.G = 2 * self.basis.make_real_sand_matrix(L_meas_vec, Id_vec)
         self.k_T = -2 * self.basis.dualize(L_meas).real
 
-    def a_fn(self, rho, t):
-        # TODO: The convention for the order of rho and t is inconsistent
-        # between scipy's solve_ivp and sde's euler, which makes the code
-        # confusing. Should probably modify sde's euler to use scipy's
-        # convention, but should also look at the conventions used by the
-        # stochastic solvers in julia's differential equation library.
-        return self.Q @ rho
+    def a_fn(self, t, rho_vec):
+        return self.Q @ rho_vec
 
-    def b_fn(self, rho, t):
-        return (self.k_T @ rho) * rho + self.G @ rho
+    def b_fn(self, t, rho_vec):
+        return (self.k_T @ rho_vec) * rho_vec + self.G @ rho_vec
 
-    def b_fn_tr_non_pres(self, rho, t):
-        return self.G @ rho
+    def b_fn_tr_non_pres(self, t, rho_vec):
+        return self.G @ rho_vec
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
@@ -672,14 +667,14 @@ class JumpLindbladIntegrator(UncondLindbladIntegrator):
         self.tr_fnctnl = self.basis.dualize(np.eye(L_meas.shape[0],
                                                    dtype=L_meas.dtype)).real
 
-    def lin_no_jump_Dfun(self, t, rho):
+    def lin_no_jump_jac(self, t, rho_vec):
         return self.lin_no_jump_op
 
-    def lin_no_jump_a_fn(self, t, rho):
-        return self.lin_no_jump_op @ rho
+    def lin_no_jump_a_fn(self, t, rho_vec):
+        return self.lin_no_jump_op @ rho_vec
 
-    def jump_event(self, t, rho, jump_threshold):
-        return self.tr_fnctnl @ rho - jump_threshold
+    def jump_event(self, t, rho_vec, jump_threshold):
+        return self.tr_fnctnl @ rho_vec - jump_threshold
 
     def integrate(self, rho_0, times, Us=None, return_meas_rec=False,
                   method='BDF'):
@@ -704,7 +699,7 @@ class JumpLindbladIntegrator(UncondLindbladIntegrator):
             ivp_soln = solve_ivp(self.lin_no_jump_a_fn,
                                  [times[start_idx], times[-1]], rho_0_vec,
                                  t_eval=times[start_idx:], events=jump,
-                                 method=method, jac=self.lin_no_jump_Dfun)
+                                 method=method, jac=self.lin_no_jump_jac)
             traces = np.tensordot(ivp_soln.y, self.tr_fnctnl, [0, 0])
             vec_soln_segments.append(ivp_soln.y.T / traces[:,np.newaxis])
             if ivp_soln.status == 1:
@@ -757,8 +752,8 @@ class GaussIntegrator:
         else:
             self.Q = drift_rep
 
-    def a_fn(self, rho, t):
-        return np.dot(self.Q, rho)
+    def a_fn(self, t, rho_vec):
+        return np.dot(self.Q, rho_vec)
 
     def integrate(self, rho_0, times):
         raise NotImplementedError()
@@ -786,7 +781,7 @@ class UncondGaussIntegrator(GaussIntegrator):
         don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
 
     """
-    def Dfun(self, t, rho):
+    def jac(self, t, rho_vec):
         return self.Q
 
     def integrate(self, rho_0, times, method='BDF'):
@@ -803,10 +798,9 @@ class UncondGaussIntegrator(GaussIntegrator):
 
         """
         rho_0_vec = sb.vectorize(rho_0, self.basis).real
-        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
-                             (times[0], times[-1]),
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]),
                              rho_0_vec, method=method, t_eval=times,
-                             jac=self.Dfun)
+                             jac=self.jac)
         return Solution(ivp_soln.y.T, self.basis)
 
     def integrate_non_herm(self, rho_0, times, solve_ivp_kwargs=None):
@@ -829,10 +823,9 @@ class UncondGaussIntegrator(GaussIntegrator):
         rho_0_vec = sb.vectorize(rho_0, self.basis)
         default_solve_ivp_kwargs = {'method': 'BDF',
                                     't_eval': times,
-                                    'jac': self.Dfun}
+                                    'jac': self.jac}
         process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
-        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
-                             (times[0], times[-1]),
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]),
                              rho_0_vec, **default_solve_ivp_kwargs)
         return Solution(ivp_soln.y.T, self.basis)
 
@@ -879,15 +872,18 @@ class Strong_0_5_HomodyneIntegrator(GaussIntegrator):
             self.G = diffusion_reps['G']
             self.k_T = diffusion_reps['k_T']
 
-    def b_fn(self, rho, t):
-        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
+    def b_fn(self, t, rho_vec):
+        return np.dot(self.k_T, rho_vec)*rho_vec + np.dot(self.G, rho_vec)
 
-    def b_fn_tr_dec(self, rho, t):
+    def b_fn_tr_dec(self, t, rho_vec):
         # For use with a trace-decreasing linear integration function
-        return np.dot(self.G, rho)
+        return np.dot(self.G, rho_vec)
 
-    def dW_fn(self, dM, dt, rho, t):
-        return dM + np.dot(self.k_T, rho) * dt
+    def dW_fn(self, dM, dt, t, rho_vec):
+        '''Convert measurement increment dM to Wiener increment dW.
+
+        '''
+        return dM + np.dot(self.k_T, rho_vec) * dt
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         raise NotImplementedError()
@@ -1173,14 +1169,14 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
     """
-    def b_dx_b_fn(self, rho, t):
+    def b_dx_b_fn(self, t, rho_vec):
         # TODO: May want this to be defined by the constructor to facilitate
         # numba optimization.
-        return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
+        return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho_vec)
 
-    def b_dx_b_fn_tr_dec(self, rho, t):
+    def b_dx_b_fn_tr_dec(self, t, rho_vec):
         # Used by trace decreasing interator
-        return b_dx_b_tr_dec(self.G2, rho)
+        return b_dx_b_tr_dec(self.G2, rho_vec)
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         r"""Integrate the initial value problem.
@@ -1277,22 +1273,6 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
                                      self.dW_fn, rho_0_vec, times, dMs)
         return Solution(vec_soln, self.basis)
 
-class FaultyMilsteinHomodyneIntegrator(MilsteinHomodyneIntegrator):
-    r"""Integrator included to test if grid convergence could identify an error
-    I originally had in my Milstein integrator (missing a factor of 1/2 in front
-    of the term that's added to the Euler scheme)
-
-    """
-
-    def integrate(self, rho_0, times, U1s=None, U2s=None):
-        rho_0_vec = sb.vectorize(rho_0, self.basis).real
-        if U1s is None:
-            U1s = np.random.randn(len(times) -1)
-
-        vec_soln = sde.faulty_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
-                                       rho_0_vec, times, U1s)
-        return Solution(vec_soln, self.basis)
-
 class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     r"""Order 1.5 Taylor ntegrator for the conditional Gaussian master equation.
 
@@ -1320,50 +1300,50 @@ class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
         already known and don't need to calculate from `c_op`, `M_sq`, and `N`.
 
     """
-    def a_fn(self, rho):
-        return np.dot(self.Q, rho)
+    def a_fn(self, rho_vec):
+        return np.dot(self.Q, rho_vec)
 
-    def b_fn(self, rho):
-        return np.dot(self.k_T, rho)*rho + np.dot(self.G, rho)
+    def b_fn(self, rho_vec):
+        return np.dot(self.k_T, rho_vec)*rho_vec + np.dot(self.G, rho_vec)
 
-    def b_fn_tr_dec(self, rho):
-        return np.dot(self.G, rho)
+    def b_fn_tr_dec(self, rho_vec):
+        return np.dot(self.G, rho_vec)
 
-    def b_dx_b_fn(self, rho):
-        return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho)
+    def b_dx_b_fn(self, rho_vec):
+        return b_dx_b(self.G2, self.k_T_G, self.G, self.k_T, rho_vec)
 
-    def b_dx_b_fn_tr_dec(self, rho):
-        return b_dx_b_tr_dec(self.G2, rho)
+    def b_dx_b_fn_tr_dec(self, rho_vec):
+        return b_dx_b_tr_dec(self.G2, rho_vec)
 
-    def b_dx_a_fn(self, rho):
-        return b_dx_a(self.QG, self.k_T, self.Q, rho)
+    def b_dx_a_fn(self, rho_vec):
+        return b_dx_a(self.QG, self.k_T, self.Q, rho_vec)
 
-    def b_dx_a_fn_tr_dec(self, rho):
-        return b_dx_a_tr_dec(self.QG, rho)
+    def b_dx_a_fn_tr_dec(self, rho_vec):
+        return b_dx_a_tr_dec(self.QG, rho_vec)
 
-    def a_dx_b_fn(self, rho):
-        return a_dx_b(self.GQ, self.k_T, self.Q, self.k_T_Q, rho)
+    def a_dx_b_fn(self, rho_vec):
+        return a_dx_b(self.GQ, self.k_T, self.Q, self.k_T_Q, rho_vec)
 
-    def a_dx_b_fn_tr_dec(self, rho):
-        return a_dx_b_tr_dec(self.GQ, rho)
+    def a_dx_b_fn_tr_dec(self, rho_vec):
+        return a_dx_b_tr_dec(self.GQ, rho_vec)
 
-    def a_dx_a_fn(self, rho):
-        return a_dx_a(self.Q2, rho)
+    def a_dx_a_fn(self, rho_vec):
+        return a_dx_a(self.Q2, rho_vec)
 
-    def b_dx_b_dx_b_fn(self, rho):
+    def b_dx_b_dx_b_fn(self, rho_vec):
         return b_dx_b_dx_b(self.G3, self.G2, self.G, self.k_T, self.k_T_G,
-                           self.k_T_G2, rho)
+                           self.k_T_G2, rho_vec)
 
-    def b_dx_b_dx_b_fn_tr_dec(self, rho):
-        return b_dx_b_dx_b_tr_dec(self.G3, rho)
+    def b_dx_b_dx_b_fn_tr_dec(self, rho_vec):
+        return b_dx_b_dx_b_tr_dec(self.G3, rho_vec)
 
-    def b_b_dx_dx_b_fn(self, rho):
-        return b_b_dx_dx_b(self.G, self.k_T, self.k_T_G, rho)
+    def b_b_dx_dx_b_fn(self, rho_vec):
+        return b_b_dx_dx_b(self.G, self.k_T, self.k_T_G, rho_vec)
 
-    def b_b_dx_dx_b_fn_tr_dec(self, rho):
+    def b_b_dx_dx_b_fn_tr_dec(self, rho_vec):
         return 0
 
-    def b_b_dx_dx_a_fn(self, rho):
+    def b_b_dx_dx_a_fn(self, rho_vec):
         return 0
 
     def integrate(self, rho_0, times, U1s=None, U2s=None):
