@@ -161,6 +161,14 @@ class HierarchyIntegratorFactory():
                                              self.A, xi_fn, S, L, H, r, mu,
                                              field_state)
 
+class HierarchyIntegratorFactoryExpCutoff(HierarchyIntegratorFactory):
+    def __init__(self, d_sys, n_max, decay_const, sparse_basis=None):
+        super().__init__(d_sys, n_max, sparse_basis=sparse_basis)
+        self.A = np.zeros((self.n_max + 1, self.n_max + 1),
+                          dtype=np.complex)
+        for n in range(n_max):
+            self.A[n, n+1] = np.sqrt(n + 1)*np.exp(-n/decay_const)
+
 class WavepacketUncondIntegrator:
     def __init__(self, sparse_basis, n_max, A, xi_fn, S, L, H, r=0, mu=0):
         self.basis = sparse_basis.basis.todense()
@@ -189,10 +197,13 @@ class WavepacketUncondIntegrator:
         DS = sparse_basis.make_diff_op_matrix(S_vec)
         self.wp_abs = DS.dot(self.Asand)
 
-    def a_fn(self, rho, t):
-        return np.dot(self.Dfun(t), rho)
+    def a_fn(self, t, rho_vec):
+        return np.dot(self.jac(t, rho_vec), rho_vec)
 
-    def Dfun(self, t):
+    def jac(self, t, rho_vec):
+        r"""The function required by `scipy.integrate.solve_ivp` for the Jacobian
+
+        """
         xi_t = self.xi_fn(t)
         return (self.wp_ind + xi_t.real * self.wp_re + xi_t.imag * self.wp_im +
                 np.abs(xi_t)**2 * self.wp_abs)
@@ -212,17 +223,16 @@ class WavepacketUncondIntegrator:
         """
         default_solve_ivp_kwargs = {'method': 'BDF',
                                     't_eval': times,
-                                    'jac': lambda t, rho: self.Dfun(t)}
+                                    'jac': self.jac}
         process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
                                                        dtype=np.complex)),
                                  self.basis).real
-        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
-                             (times[0], times[-1]), rho_0_vec,
-                              **default_solve_ivp_kwargs)
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
+                             **default_solve_ivp_kwargs)
         return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
-    def integrate_vec_init_cond(self, rho_0_vec, times):
+    def integrate_vec_init_cond(self, rho_0_vec, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
         conditions, already expressed in vectorized form.
 
@@ -235,8 +245,13 @@ class WavepacketUncondIntegrator:
         :rtype:             `Solution`
 
         """
-        vec_soln = odeint(self.a_fn, rho_0_vec, times, Dfun=self.Dfun)
-        return HierarchySolution(vec_soln, self.basis, self.d_sys)
+        default_solve_ivp_kwargs = {'method': 'BDF',
+                                    't_eval': times,
+                                    'jac': self.jac}
+        process_default_kwargs(solve_ivp_kwargs, default_solve_ivp_kwargs)
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
+                             **default_solve_ivp_kwargs)
+        return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
     def integrate_hier_init_cond(self, rho_0_hier, times, solve_ivp_kwargs=None):
         r"""Integrate the equation for a list of times with given initial
@@ -261,10 +276,9 @@ class WavepacketUncondIntegrator:
         """
         default_solve_ivp_kwargs = {'method': 'BDF',
                                     't_eval': times,
-                                    'jac': lambda t, rho: self.Dfun(t)}
+                                    'jac': self.jac}
         rho_0_vec = sb.vectorize(rho_0_hier, self.basis)
-        ivp_soln = solve_ivp(lambda t, rho: self.a_fn(rho, t),
-                             (times[0], times[-1]), rho_0_vec,
+        ivp_soln = solve_ivp(self.a_fn, (times[0], times[-1]), rho_0_vec,
                              **default_solve_ivp_kwargs)
         return HierarchySolution(ivp_soln.y.T, self.basis, self.d_sys)
 
@@ -296,11 +310,11 @@ class EulerWavepacketHomodyneIntegrator(WavepacketUncondIntegrator):
     def G_t_fn(self, xi_t):
         return self.G_ind + xi_t.real * self.G_re + xi_t.imag * self.G_im
 
-    def b_fn(self, rho, t):
+    def b_fn(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         G_t = self.G_t_fn(xi_t)
-        return (k_T_t @ rho) * rho + G_t @ rho
+        return (k_T_t @ rho_vec) * rho_vec + G_t @ rho_vec
 
     def integrate(self, rho_0, times, U1s=None):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
@@ -340,13 +354,13 @@ class MilsteinWavepacketHomodyneIntegrator(EulerWavepacketHomodyneIntegrator):
                 xi_t.imag * xi_t.real * self.k_T_G_reim +
                 xi_t.real**2 * self.k_T_G_re2 + xi_t.imag**2 * self.k_T_G_im2)
 
-    def b_dx_b_fn(self, rho, t):
+    def b_dx_b_fn(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         G_t = self.G_t_fn(xi_t)
         G2_t = self.G2_t_fn(xi_t)
         k_T_G_t = self.k_T_G_t_fn(xi_t)
-        return integ.b_dx_b(G2_t, k_T_G_t, G_t, k_T_t, rho)
+        return integ.b_dx_b(G2_t, k_T_G_t, G_t, k_T_t, rho_vec)
 
     def integrate(self, rho_0, times, U1s=None):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
@@ -404,39 +418,39 @@ class EulerWavepacketJumpIntegrator(WavepacketUncondIntegrator):
         return (self.k_T_ind + xi_t.real * self.k_T_re +
                 xi_t.imag * self.k_T_im + np.abs(xi_t)**2 * self.k_T_abs)
 
-    def no_jump_fn(self, t, rho):
+    def no_jump_fn(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         F_t = self.F_t_fn(xi_t)
-        return F_t @ rho + (k_T_t @ rho) * rho
+        return F_t @ rho_vec + (k_T_t @ rho_vec) * rho_vec
 
-    def no_jump_fn_tr_dec(self, t, rho):
+    def no_jump_fn_tr_dec(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         F_t = self.F_t_fn(xi_t)
-        return F_t @ rho
+        return F_t @ rho_vec
 
-    def no_jump_tr_dec_D_fn(self, t, rho):
+    def no_jump_tr_dec_D_fn(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         F_t = self.F_t_fn(xi_t)
         return F_t
 
-    def jump_fn(self, t, rho):
+    def jump_fn(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         G_t = self.G_t_fn(xi_t)
-        return G_t @ rho / (k_T_t @ rho)
+        return G_t @ rho_vec / (k_T_t @ rho_vec)
 
-    def jump_rate_fn(self, t, rho):
+    def jump_rate_fn(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
-        return k_T_t @ rho
+        return k_T_t @ rho_vec
 
-    def Dfun(self, t, rho):
+    def Dfun(self, t, rho_vec):
         xi_t = self.xi_fn(t)
         k_T_t = self.k_T_t_fn(xi_t)
         return (self.F_t_fn(xi_t) +
-                (k_T_t @ rho) * np.eye(rho.shape[0], dtype=k_T_t.dtype) +
-                np.outer(rho, k_T_t))
+                (k_T_t @ rho_vec) * np.eye(rho_vec.shape[0], dtype=k_T_t.dtype) +
+                np.outer(rho_vec, k_T_t))
 
     def integrate(self, rho_0, times, Us=None, return_meas_rec=False):
         rho_0_vec = sb.vectorize(np.kron(rho_0, np.eye(self.n_max + 1,
