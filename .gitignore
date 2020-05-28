@@ -5,6 +5,7 @@ src/pysme.egg-info/*
 .eggs/*
 *.swp
 *.pyc
+*.png
 doc/_build/*
 __pycache__/*
 .ipynb_checkpoints
