@@ -583,6 +583,12 @@ class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
     def b_fn_tr_non_pres(self, t, rho_vec):
         return self.G @ rho_vec
 
+    def dW_fn(self, dM, dt, t, rho_vec):
+        '''Convert measurement increment dM to Wiener increment dW.
+
+        '''
+        return dM + np.dot(self.k_T, rho_vec) * dt
+
     def integrate(self, rho_0, times, U1s=None, U2s=None):
         rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
         if U1s is None:
@@ -603,6 +609,30 @@ class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
         # ideal. Eventually it would be nice for everything to be one of these
         # Lindblad integrators and have methods for constructing the Gaussian
         # versions from the relevant Gaussian parameters.
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def integrate_measurements(self, rho_0, times, dMs):
+        r"""Integrate system evolution conditioned on a measurement record.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        dMs: numpy.array(len(times) - 1)
+            Incremental measurement outcomes used to drive the SDE.
+
+        Returns
+        -------
+        Solution
+            The components of the vecorized :math:`\rho` for all specified
+            times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        vec_soln = sde.meas_euler(self.a_fn, self.b_fn, self.dW_fn, rho_0_vec,
+                                  times, dMs)
         return Solution(vec_soln, self.basis.basis.todense())
 
     def gen_meas_record(self, rho_0, times, U1s=None):
