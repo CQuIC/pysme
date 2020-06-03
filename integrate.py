@@ -860,7 +860,7 @@ class Strong_1_0_HeterodyneLindbladIntegrator(Strong_0_5_HeterodyneLindbladInteg
         don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
 
     """
-    def __init__(self, Ls, H, meas_L_idx, p, basis=None, drift_rep=None, **kwargs):
+    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
         super(Strong_1_0_HeterodyneLindbladIntegrator, self).__init__(Ls, H, meas_L_idx,
                                                                       basis, drift_rep, **kwargs)
         
@@ -873,9 +873,6 @@ class Strong_1_0_HeterodyneLindbladIntegrator(Strong_0_5_HeterodyneLindbladInteg
         self.G_1_G_2 = np.dot(self.G_1, self.G_2)
         self.G_2_G_1 = np.dot(self.G_2, self.G_1)
         self.G_2_G_2 = np.dot(self.G_2, self.G_2)
-        
-        # Parameter for the multiple ito integral approximation in multi_int_ij_fn().
-        self.p = p
 
 
 class EulerHeterodyneIntegrator(Strong_0_5_HeterodyneLindbladIntegrator):
@@ -998,6 +995,13 @@ class MilsteinHeterodyneIntegrator_MultipleItoInt(Strong_1_0_HeterodyneLindbladI
         don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
 
     """
+    
+    def __init__(self, Ls, H, meas_L_idx, p=100, basis=None, drift_rep=None, **kwargs):
+        super(MilsteinHeterodyneIntegrator_MultipleItoInt, self).__init__(Ls, H, meas_L_idx,
+                                                                          basis, drift_rep, **kwargs)
+        
+        # Parameter for the multiple ito integral approximation in multi_int_ij_fn().
+        self.p = p
    
     def bi_dx_bj_fn(self, rho, t, i, j):
         if i==1 and j==1:
