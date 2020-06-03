@@ -194,6 +194,118 @@ def meas_euler(drift_fn, diffusion_fn, dW_fn, X0, ts, dMs):
 
     return X
 
+def euler_heterodyne(drift_fn, diffusion_fn_1, diffusion_fn_2, X0, ts, Us_1, Us_2):
+    r"""Integrate a system of ordinary stochastic differential equations subject
+    to 2-dimensional noise, corresponding to heterodyne detection:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,\vec{dW}
+
+    Uses the Euler method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \Sigma_{j=1}^{m}\vec{b}^j(\vec{X}_i,t_i)\Delta W_i^j
+
+    where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
+    distributed random variable with mean 0 and variance 1.
+
+    Parameters
+    ----------
+    drift_fn : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : array, shape=(len(t) - 1)
+        Normalized Weiner increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+    # Scale the Weiner increments to the time increments.
+    sqrtdts = np.sqrt(dts)
+    dWs_1 = np.product(np.array([sqrtdts, Us_1]), axis=0)
+    dWs_2 = np.product(np.array([sqrtdts, Us_2]), axis=0)
+
+    X = np.array([X0])
+
+    for t, dt, dW_1, dW_2 in zip(ts[:-1], dts, dWs_1, dWs_2):
+        X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
+                       diffusion_fn_1(t, X[-1])*dW_1 + 
+                       diffusion_fn_2(t, X[-1])*dW_2))
+
+    return X
+
+def meas_euler_heterodyne(drift_fn, diffusion_fn_1, diffusion_fn_2, dW_fn_1, dW_fn_2, X0, ts, dMs_1, dMs_2):
+    r"""Integrate a system of ordinary stochastic differential equations
+    conditioned on an incremental measurement record:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,dW_t
+
+    Uses the Euler method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta W_i
+
+    where :math:`\Delta W_i=f(\Delta M_i,\vec{X}, t)`, :math:`\Delta M_i` being
+    the incremental measurement record being used to drive the SDE.
+
+    Parameters
+    ----------
+    drift_fn : callable(X, t)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(X, t)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    dW_fn : callable(dM, dt, X, t)
+        The function that converts the incremental measurement and current
+        state to the Wiener increment.
+    X0 : array
+        Initial condition on X
+    ts : array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    dMs : array, shape=(len(t) - 1)
+        Incremental measurement outcomes used to drive the SDE.
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+
+    X = np.array([X0])
+
+    for t, dt, dM_1, dM_2 in zip(ts[:-1], dts, dMs_1, dMs_2):
+        dW_1 = dW_fn_1(dM_1, dt, X[-1], t)
+        dW_2 = dW_fn_2(dM_2, dt, X[-1], t)
+        X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
+                       diffusion_fn_1(t, X[-1])*dW_1 + 
+                       diffusion_fn_2(t, X[-1])*dW_2))
+                      
+    return X
+
 def milstein(drift, diffusion, b_dx_b, X0, ts, Us):
     r"""Integrate a system of ordinary stochastic differential equations subject
     to scalar noise:
@@ -312,6 +424,280 @@ def meas_milstein(drift_fn, diffusion_fn, b_dx_b_fn, dW_fn, X0, ts, dMs):
         X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
                        diffusion_fn(t, X[-1])*dW +
                        b_dx_b_fn(t, X[-1])*(dW**2 - dt)/2))
+
+    return X
+
+def milstein_heterodyne(drift_fn, diffusion_fn_1, diffusion_fn_2, bi_dx_bj,
+                        X0, ts, Us_1, Us_2):
+    r"""Integrate a system of ordinary stochastic differential equations subject
+    to scalar a **bi-dimensional** noise that **commutes**:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,dW_t
+
+    Uses the Milstein method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta W_i+
+       \frac{1}{2}\left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
+       \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
+
+    where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
+    distributed random variable with mean 0 and variance 1.
+
+    Parameters
+    ----------
+    drift : callable(t, X)
+        Computes the drift coefficient :math:`\vec{a}(t,\vec{X})`
+    diffusion : callable(t, X)
+        Computes the diffusion coefficient :math:`\vec{b}(t,\vec{X})`
+    b_dx_b : callable(t, X)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(t,\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(t,\vec{X})`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : array, shape=(len(t) - 1)
+        Normalized Wiener increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+    # Scale the Wiener increments to the time increments.
+    sqrtdts = np.sqrt(dts)
+    dWs_1 = np.product(np.array([sqrtdts, Us_1]), axis=0)
+    dWs_2 = np.product(np.array([sqrtdts, Us_2]), axis=0)
+
+    X = np.array([X0])
+    
+    for t, dt, dW_1, dW_2 in zip(ts[:-1], dts, dWs_1, dWs_2):
+        X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
+                       diffusion_fn_1(t, X[-1])*dW_1 + 
+                       diffusion_fn_2(t, X[-1])*dW_2 +
+                       bi_dx_bj(X[-1], t, 1, 1)*(dW_1**2 - dt)/2 +  
+                       bi_dx_bj(X[-1], t, 1, 2)*(dW_1*dW_2) +
+                       bi_dx_bj(X[-1], t, 2, 2)*(dW_2**2 - dt)/2))
+        
+        # Equivalent to
+                      #bi_dx_bj(X[-1], t, 1, 1)*(dW_1**2 - dt)/2 +  
+                      #bi_dx_bj(X[-1], t, 1, 2)*(dW_1*dW_2)/2 +
+                      #bi_dx_bj(X[-1], t, 2, 1)*(dW_2*dW_1)/2 +
+                      #bi_dx_bj(X[-1], t, 2, 2)*(dW_2**2 - dt)/2))
+        # Since bi_db_bj(1,2)=bi_db_bj(2,1) and dW_1*dW_2=dW_2*dW_1
+
+    return X
+
+def meas_milstein_heterodyne(drift_fn, diffusion_fn_1, diffusion_fn_2, dW_fn_1, dW_fn_2,
+                             bi_dx_bj, X0, ts, dMs_1, dMs_2):
+    r"""Integrate a system of ordinary stochastic differential equations
+    conditioned on an incremental measurement record:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,dW_t
+
+    Uses the Milstein method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta W_i+
+       \frac{1}{2}\left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
+       \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
+
+    where :math:`\Delta W_i=f(\Delta M_i,\vec{X}, t)`, :math:`\Delta M_i` being
+    the incremental measurement record being used to drive the SDE.
+
+    Parameters
+    ----------
+    drift_fn : callable(t, X)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(t, X)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    b_dx_b_fn : callable(t, X)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(t,\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(t,\vec{X})`
+    dW_fn : callable(dM, dt, t, X)
+        The function that converts the incremental measurement and current
+        state to the Wiener increment.
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    dMs : numpy.array, shape=(len(t) - 1)
+        Incremental measurement outcomes used to drive the SDE.
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+
+    X = np.array([X0])
+        
+    for t, dt, dM_1, dM_2 in zip(ts[:-1], dts, dMs_1, dMs_2):
+        dW_1 = dW_fn_1(dM_1, dt, X[-1], t)
+        dW_2 = dW_fn_2(dM_2, dt, X[-1], t)
+        X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
+                       diffusion_fn_1(t, X[-1])*dW_1 + 
+                       diffusion_fn_2(t, X[-1])*dW_2 +
+                       bi_dx_bj(X[-1], t, 1, 1)*(dW_1**2 - dt)/2 +  
+                       bi_dx_bj(X[-1], t, 1, 2)*(dW_1*dW_2)/2 +
+                       bi_dx_bj(X[-1], t, 2, 1)*(dW_2*dW_1)/2 +
+                       bi_dx_bj(X[-1], t, 2, 2)*(dW_2**2 - dt)/2))
+
+    return X
+
+def milstein_heterodyne_multiint(drift_fn, diffusion_fn_1, diffusion_fn_2, bi_dx_bj, multi_int_ij,
+                                 X0, ts, Us_1, Us_2):
+    r"""Integrate a system of ordinary stochastic differential equations subject
+    to scalar a **bi-dimensional** noise:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,dW_t
+
+    Uses the Milstein method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta W_i+
+       \frac{1}{2}\left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
+       \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
+
+    where :math:`\Delta W_i=U_i\sqrt{\Delta t}`, :math:`U` being a normally
+    distributed random variable with mean 0 and variance 1.
+
+    Parameters
+    ----------
+    drift : callable(t, X)
+        Computes the drift coefficient :math:`\vec{a}(t,\vec{X})`
+    diffusion : callable(t, X)
+        Computes the diffusion coefficient :math:`\vec{b}(t,\vec{X})`
+    b_dx_b : callable(t, X)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(t,\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(t,\vec{X})`
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    Us : array, shape=(len(t) - 1)
+        Normalized Wiener increments for each time step (i.e. samples from a
+        Gaussian distribution with mean 0 and variance 1).
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+    # Scale the Wiener increments to the time increments.
+    sqrtdts = np.sqrt(dts)
+    dWs_1 = np.product(np.array([sqrtdts, Us_1]), axis=0)
+    dWs_2 = np.product(np.array([sqrtdts, Us_2]), axis=0)
+
+    X = np.array([X0])
+    
+    for t, dt, dW_1, dW_2 in zip(ts[:-1], dts, dWs_1, dWs_2):
+        X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
+                       diffusion_fn_1(t, X[-1])*dW_1 + 
+                       diffusion_fn_2(t, X[-1])*dW_2 +
+                       bi_dx_bj(X[-1], t, 1, 1)*(dW_1**2 - dt)/2 +  
+                       bi_dx_bj(X[-1], t, 1, 2)*multi_int_ij(dW_1, dW_2, dt) +
+                       bi_dx_bj(X[-1], t, 2, 1)*multi_int_ij(dW_2, dW_1, dt) +
+                       bi_dx_bj(X[-1], t, 2, 2)*(dW_2**2 - dt)/2))
+
+    return X
+
+def meas_milstein_heterodyne_multiint(drift_fn, diffusion_fn_1, diffusion_fn_2, dW_fn_1, dW_fn_2,
+                                      bi_dx_bj, multi_int_ij, X0, ts, dMs_1, dMs_2):
+    r"""Integrate a system of ordinary stochastic differential equations
+    conditioned on an incremental measurement record:
+
+    .. math::
+
+       d\vec{X}=\vec{a}(\vec{X},t)\,dt+\vec{b}(\vec{X},t)\,dW_t
+
+    Uses the Milstein method:
+
+    .. math::
+
+       \vec{X}_{i+1}=\vec{X}_i+\vec{a}(\vec{X}_i,t_i)\Delta t_i+
+       \vec{b}(\vec{X}_i,t_i)\Delta W_i+
+       \frac{1}{2}\left(\vec{b}(\vec{X}_i,t_i)\cdot\vec{\nabla}_{\vec{X}}\right)
+       \vec{b}(\vec{X}_i,t_i)\left((\Delta W_i)^2-\Delta t_i\right)
+
+    where :math:`\Delta W_i=f(\Delta M_i,\vec{X}, t)`, :math:`\Delta M_i` being
+    the incremental measurement record being used to drive the SDE.
+
+    Parameters
+    ----------
+    drift_fn : callable(t, X)
+        Computes the drift coefficient :math:`\vec{a}(\vec{X},t)`
+    diffusion_fn : callable(t, X)
+        Computes the diffusion coefficient :math:`\vec{b}(\vec{X},t)`
+    b_dx_b_fn : callable(t, X)
+        Computes the correction coefficient
+        :math:`\left(\vec{b}(t,\vec{X})\cdot
+        \vec{\nabla}_{\vec{X}}\right)\vec{b}(t,\vec{X})`
+    dW_fn : callable(dM, dt, t, X)
+        The function that converts the incremental measurement and current
+        state to the Wiener increment.
+    X0 : numpy.array
+        Initial condition on X
+    ts : numpy.array
+        A sequence of time points for which to solve for X.  The initial value
+        point should be the first element of this sequence.
+    dMs : numpy.array, shape=(len(t) - 1)
+        Incremental measurement outcomes used to drive the SDE.
+
+    Returns
+    -------
+    numpy.array, shape=(len(ts), len(X0))
+        Array containing the value of X for each desired time in t, with the
+        initial value `X0` in the first row.
+
+    """
+
+    dts = [tf - ti for tf, ti in zip(ts[1:], ts[:-1])]
+
+    X = np.array([X0])
+        
+    for t, dt, dM_1, dM_2 in zip(ts[:-1], dts, dMs_1, dMs_2):
+        dW_1 = dW_fn_1(dM_1, dt, X[-1], t)
+        dW_2 = dW_fn_2(dM_2, dt, X[-1], t)
+        X = np.vstack((X, X[-1] + drift_fn(t, X[-1])*dt +
+                       diffusion_fn_1(t, X[-1])*dW_1 + 
+                       diffusion_fn_2(t, X[-1])*dW_2 +
+                       bi_dx_bj(X[-1], t, 1, 1)*(dW_1**2 - dt)/2 +  
+                       bi_dx_bj(X[-1], t, 1, 2)*multi_int_ij(dW_1, dW_2, dt) +
+                       bi_dx_bj(X[-1], t, 2, 1)*multi_int_ij(dW_2, dW_1, dt) +
+                       bi_dx_bj(X[-1], t, 2, 2)*(dW_2**2 - dt)/2))
 
     return X
 
