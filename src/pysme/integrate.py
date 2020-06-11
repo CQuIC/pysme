@@ -1486,7 +1486,43 @@ class IntegratorFactory:
         return self.IntClass(**constructor_kwargs)
 
 class QuasiMarkoff2LvlIntegrator(UncondLindbladIntegrator):
-    '''Delta_AL = omega_A - omega_L
+    r'''QuasiMarkoff equation for squeezed fields
+
+    Assumes the memory time associated with the squeezing is very much less than
+    the atomic decay rate but can be comparable to or even longer than the Rabi
+    period. See Equations 1 through 25 in reference:
+
+    [YB96]  Influence of squeezing bandwidths on resonance fluorescence
+            G. Yeoman and S. M. Barnett, Journal of Modern Optics 43, 2037 (1996).
+            https://doi.org/10.1080/09500349608232870
+
+    Parameters
+    ----------
+    gamma : non-negative float
+        Atomic linewidth.
+    N_A : non-negative float
+        The thermal parameter evaluated at atomic transition frequency. See
+        the text below Eqn 14 in [YB96].
+    N_Om : non-negative float
+        The thermal parameter evaluated at atomic transition frequency minus
+        the Rabi freqency. See the text below Eqn 14 in [YB96].
+    M_A : complex float
+        The squeezing parameter evaluated at atomic transition frequency. See
+        the text below Eqn 14 in [YB96].
+    M_Om : complex float
+        The squeezing parameter evaluated at atomic transition frequency minus
+        the Rabi freqency. See the text below Eqn 14 in [YB96].
+    Delta_AL : float
+        Atomic frequency minus carrier (laser) frequency i.e,
+        Delta_AL = omega_A - omega_L.
+    Omega : float
+        The Rabi frequency.
+    phi_L : float
+        Carrier (laser) frequency phase, see Eq 4 in [YB96].
+    F_A : complex float
+        Eq. 18 in [YB96].
+    G_A : complex float
+        Eq. 19 in [YB96].
 
     '''
     def __init__(self, gamma, N_A, N_Om, M_A, M_Om, Delta_AL, Omega, phi_L, F_A, G_A):
@@ -1498,6 +1534,7 @@ class QuasiMarkoff2LvlIntegrator(UncondLindbladIntegrator):
         sz = np.array([[1, 0], [0, -1]], dtype=np.complex)
         sp = (sx + 1j*sy)/2
         sm = (sx - 1j*sy)/2
+        # Eqn 16 and 17 in [YB96]
         Sm = sm*np.exp(-1j*phi_L)
         Sp = sp*np.exp(1j*phi_L)
         Y = 1j*sz@(Sp + Sm)
