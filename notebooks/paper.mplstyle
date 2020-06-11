@@ -296,9 +296,9 @@ mathtext.fontset : cm # Should be 'dejavusans' (default),
 #axes.edgecolor      : black   # axes edge color
 #axes.linewidth      : 0.8     # edge linewidth
 #axes.grid           : False   # display grid or not
-axes.titlesize      : 18   # fontsize of the axes title
+axes.titlesize      : 10   # fontsize of the axes title
 #axes.titlepad       : 6.0     # pad between axes and title in points
-axes.labelsize      : 18  # fontsize of the x any y labels
+axes.labelsize      : 10  # fontsize of the x any y labels
 #axes.labelpad       : 4.0     # space between label and axis
 #axes.labelweight    : normal  # weight of the x and y labels
 #axes.labelcolor     : black
@@ -379,7 +379,7 @@ axes.labelsize      : 18  # fontsize of the x any y labels
 #xtick.major.pad      : 3.5      # distance to major tick label in points
 #xtick.minor.pad      : 3.4      # distance to the minor tick label in points
 #xtick.color          : k      # color of the tick labels
-xtick.labelsize      : 18 # fontsize of the tick labels
+xtick.labelsize      : 10 # fontsize of the tick labels
 #xtick.direction      : out    # direction: in, out, or inout
 #xtick.minor.visible  : False  # visibility of minor ticks on x-axis
 #xtick.major.top      : True   # draw x axis top major ticks
@@ -396,7 +396,7 @@ xtick.labelsize      : 18 # fontsize of the tick labels
 #ytick.major.pad      : 3.5      # distance to major tick label in points
 #ytick.minor.pad      : 3.4      # distance to the minor tick label in points
 #ytick.color          : k      # color of the tick labels
-ytick.labelsize      : 18 # fontsize of the tick labels
+ytick.labelsize      : 10 # fontsize of the tick labels
 #ytick.direction      : out    # direction: in, out, or inout
 #ytick.minor.visible  : False  # visibility of minor ticks on y-axis
 #xtick.major.left     : True   # draw y axis left major ticks
@@ -423,7 +423,7 @@ ytick.labelsize      : 18 # fontsize of the tick labels
 #legend.numpoints     : 1        # the number of marker points in the legend line
 #legend.scatterpoints : 1        # number of scatter points
 #legend.markerscale   : 1.0      # the relative size of legend markers vs. original
-legend.fontsize      : 18
+legend.fontsize      : 10
 # Dimensions as fraction of fontsize:
 #legend.borderpad     : 0.4      # border whitespace
 #legend.labelspacing  : 0.5      # the vertical space between the legend entries
