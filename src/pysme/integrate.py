@@ -56,6 +56,69 @@ def b_dx_b(G2, k_T_G, G, k_T, rho):
     return ((np.dot(k_T_G, rho) + 2*k_rho_dot**2)*rho +
             np.dot(G2 + 2*k_rho_dot*G, rho))
 
+def bi_dx_bj(G_i, G_j, G_j_G_i, k_T_i, k_T_j, k_T_j_G_i, rho):
+    r"""A term in Taylor integration methods for heterodyne detection.
+
+    Possibility to have 2 different :math:`b` corresponding to the 2 different processes
+    in our heterodyne implementation.
+
+    Function to return the :math:`\left(\vec{b}^i(\vec{\rho})\cdot
+    \vec{\nabla}_{\vec{\rho}}\right)\vec{b}^j(\vec{\rho})` term for Milstein
+    integration.
+
+    Parameters
+    ----------
+    G_i: numpy.array
+        :math:`G^i`, for the first index.
+    G_j: numpy.array
+        :math:`G^j`, for the second index.
+    G_j_G_i : numpy.array
+        :math:`G^j G^i`, like :math:`G^2` but for the first :math:`G` being
+        for the process 'i' and the second for the process 'j'.
+    k_T_i: numpy.array
+        :math:`\vec{k}^T^i`.
+    k_T_j: numpy.array
+        :math:`\vec{k}^T^j`.
+    k_T_j_G_i: numpy.array
+        :math:`\vec{k}^T^jG^i`.
+    rho: numpy.array
+        :math:`\rho`.
+
+    Returns
+    -------
+    numpy.array
+        :math:`\left(\vec{b}^i(\vec{\rho})\cdot
+        \vec{\nabla}_{\vec{\rho}}\right)\vec{b}^j(\vec{\rho})`.
+
+    """
+    k_i_rho_dot = np.dot(k_T_i, rho)
+    k_j_rho_dot = np.dot(k_T_j, rho)
+    return ((np.dot(k_T_j_G_i, rho) + 2*k_j_rho_dot*k_i_rho_dot)*rho +
+             np.dot(G_j_G_i + k_i_rho_dot*G_j + k_j_rho_dot*G_i, rho))
+
+def multi_int_ij(dW_i, dW_j, p, dt):
+    r"""Approximation of the multiple Ito integrals for non-commuting noise. Not working.
+    Using Stratonovich-Taylor expansion method of Kloeden & Platen;
+    Eq (3.8) in chapter 10.3 (old version).
+
+    In new version (Through Computer Experiments) with Schurz,
+    page 83 Eq. (3.32), with (3.30) and (3.42).
+    """
+    # Not working as of now
+    ######################## Not the implementation of page 88 Kloeden & Platen.
+    term_1 = dW_i*dW_j/2
+    term_2 = 0
+    for r in range(1, p):
+        X_i_r = np.random.randn(1)
+        X_j_r = np.random.randn(1)
+        Y_i_r = np.random.randn(1)
+        Y_j_r = np.random.randn(1)
+
+        term_2 += (X_i_r*(Y_j_r+np.sqrt(2/dt)*dW_2) -
+                   X_j_r*(Y_i_r+np.sqrt(2/dt)*dW_1)  ) / r
+
+    return term_1 + dt/(2*np.pi)*term_2
+
 def b_dx_b_tr_dec(G2, rho):
     r"""Same as :func:`b_dx_b`, but for the linear differential equation.
 
@@ -497,7 +560,7 @@ class UncondTimeDepLindInt(UncondLindbladIntegrator):
             self.time_dep_L_vecs.append(lvecs)
             self.time_dep_L_coeffs.append(fs)
 
-        
+
         self.diagonal_L_supops = [[self.basis.make_real_comm_matrix(lvec, lvec)
                                    for lvec in lvecs]
                                   for lvecs in self.time_dep_L_vecs]
@@ -564,93 +627,6 @@ class UncondTimeDepLindInt(UncondLindbladIntegrator):
 
     def a_fn(self, t, rho_vec):
         return np.dot(self.jac(t, rho_vec), rho_vec)
-
-class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
-    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
-        super().__init__(Ls, H, basis, drift_rep, **kwargs)
-        L_meas_vec = self.L_vecs[meas_L_idx]
-        L_meas = Ls[meas_L_idx]
-        Id_vec = self.basis.vectorize(np.eye(L_meas.shape[0]))
-        self.G = 2 * self.basis.make_real_sand_matrix(L_meas_vec, Id_vec)
-        self.k_T = -2 * self.basis.dualize(L_meas).real
-
-    def a_fn(self, t, rho_vec):
-        return self.Q @ rho_vec
-
-    def b_fn(self, t, rho_vec):
-        return (self.k_T @ rho_vec) * rho_vec + self.G @ rho_vec
-
-    def b_fn_tr_non_pres(self, t, rho_vec):
-        return self.G @ rho_vec
-
-    def integrate(self, rho_0, times, U1s=None, U2s=None):
-        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
-        if U1s is None:
-            U1s = np.random.randn(len(times) -1)
-
-        vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
-        return Solution(vec_soln, self.basis.basis.todense())
-
-    def integrate_tr_non_pres(self, rho_0, times, U1s=None, U2s=None):
-        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
-        if U1s is None:
-            U1s = np.random.randn(len(times) -1)
-
-        vec_soln = sde.euler(self.a_fn, self.b_fn_tr_non_pres, rho_0_vec, times,
-                             U1s)
-        # TODO: Having a difference between the basis stored by the Lindblad
-        # integrators and that stored by the Gaussian integrators is also not
-        # ideal. Eventually it would be nice for everything to be one of these
-        # Lindblad integrators and have methods for constructing the Gaussian
-        # versions from the relevant Gaussian parameters.
-        return Solution(vec_soln, self.basis.basis.todense())
-
-    def gen_meas_record(self, rho_0, times, U1s=None):
-        r"""Simulate a measurement record.
-
-        Integrate for a sequence of times with a given initial condition (and
-        optionally specified white noise), returning a measurement record along
-        with the trajectory.
-
-        The incremental measurement outcomes making up the measurement record
-        are related to the white noise increments and instantaneous state in
-        the following way:
-
-        .. math::
-
-           dM_t=dW_t-\operatorname{tr}[(c+c^\dagger)\rho_t]
-
-        Parameters
-        ----------
-        rho_0 : numpy.array of complex float
-            The initial state of the system as a Hermitian matrix
-        times : numpy.array of real float
-            A sequence of time points for which to solve for rho
-        U1s: numpy.array of real float
-            Samples from a standard-normal distribution used to construct
-            Wiener increments :math:`\Delta W` for each time interval. Multiple
-            rows may be included for independent trajectories. ``U1s.shape`` is
-            assumed to be ``(len(times) - 1,)``.
-
-        Returns
-        -------
-        tuple of Solution and numpy.array
-            The components of the vecorized :math:`\rho` for all specified
-            times and an array of incremental measurement outcomes
-
-        """
-        if U1s is None:
-            U1s = np.random.randn(len(times) -1)
-
-        soln = self.integrate(rho_0, times, U1s)
-
-        dts = times[1:] - times[:-1]
-        dWs = np.sqrt(dts) * U1s
-        tr_c_c_rs = np.array([-np.dot(self.k_T, rho_vec)
-                              for rho_vec in soln.vec_soln[:-1]])
-        dMs = dWs + tr_c_c_rs * dts
-
-        return soln, dMs
 
 class JumpLindbladIntegrator(UncondLindbladIntegrator):
     def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
@@ -1020,6 +996,290 @@ class Strong_1_5_HomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         self.k_T_G2 = np.dot(self.k_T, self.G2)
         self.k_T_Q = np.dot(self.k_T, self.Q)
 
+class HomodyneLindbladIntegrator(UncondLindbladIntegrator):
+    r"""Integrator for an unconditional heterodyne Lindblad master equation.
+
+    Parameters
+    ----------
+    Ls : list of lists of form [numpy.array, (numpy.array, callable), ...]
+        Collection of Lindblad operators, each expressed as a list whose first
+        element contains the constant part of the operator and whose subsequent
+        elements are pairs whose first element is an operator and whose second
+        element is the time-dependent coefficient of that operator.
+
+        E.g., a Lindblad operator expressed algebraically as
+
+        L_j = sum_m f_{j,m}(t) L_{j,m}
+
+        is put into the list form
+
+        [L_{j,0}, (L_{j,1}, f_{j,1}), ...]
+
+    H : [numpy.array, (numpy.array, callable), ...]
+        The plant Hamiltonian expressed as a list whose first element contains
+        the constant part of the operator and whose subsequent elements are
+        pairs whose first element is an operator and whose second element is the
+        time-dependent coefficient of that operator.
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        time-independent evolution operator. Will save computation time if
+        already known and don't need to calculate from `Ls`, and `H`. Sort of a
+        holdover from the time-independent case right now. Can't imagine it
+        being useful in its current state for the time-dependent case.
+
+    """
+    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
+        super().__init__(Ls, H, basis, drift_rep, **kwargs)
+        L_meas_vec = self.L_vecs[meas_L_idx]
+        L_meas = Ls[meas_L_idx]
+        Id_vec = self.basis.vectorize(np.eye(L_meas.shape[0]))
+        self.G = 2 * self.basis.make_real_sand_matrix(L_meas_vec, Id_vec)
+        self.k_T = -2 * self.basis.dualize(L_meas).real
+
+    def a_fn(self, t, rho_vec):
+        return self.Q @ rho_vec
+
+    def b_fn(self, t, rho_vec):
+        return (self.k_T @ rho_vec) * rho_vec + self.G @ rho_vec
+
+    def b_fn_tr_non_pres(self, t, rho_vec):
+        return self.G @ rho_vec
+
+    def integrate(self, rho_0, times, U1s=None, U2s=None):
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler(self.a_fn, self.b_fn, rho_0_vec, times, U1s)
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def integrate_tr_non_pres(self, rho_0, times, U1s=None, U2s=None):
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler(self.a_fn, self.b_fn_tr_non_pres, rho_0_vec, times,
+                             U1s)
+        # TODO: Having a difference between the basis stored by the Lindblad
+        # integrators and that stored by the Gaussian integrators is also not
+        # ideal. Eventually it would be nice for everything to be one of these
+        # Lindblad integrators and have methods for constructing the Gaussian
+        # versions from the relevant Gaussian parameters.
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def gen_meas_record(self, rho_0, times, U1s=None):
+        r"""Simulate a measurement record.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise), returning a measurement record along
+        with the trajectory.
+
+        The incremental measurement outcomes making up the measurement record
+        are related to the white noise increments and instantaneous state in
+        the following way:
+
+        .. math::
+
+           dM_t=dW_t-\operatorname{tr}[(c+c^\dagger)\rho_t]
+
+        Parameters
+        ----------
+        rho_0 : numpy.array of complex float
+            The initial state of the system as a Hermitian matrix
+        times : numpy.array of real float
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array of real float
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories. ``U1s.shape`` is
+            assumed to be ``(len(times) - 1,)``.
+
+        Returns
+        -------
+        tuple of Solution and numpy.array
+            The components of the vecorized :math:`\rho` for all specified
+            times and an array of incremental measurement outcomes
+
+        """
+        if U1s is None:
+            U1s = np.random.randn(len(times) -1)
+
+        soln = self.integrate(rho_0, times, U1s)
+
+        dts = times[1:] - times[:-1]
+        dWs = np.sqrt(dts) * U1s
+        tr_c_c_rs = np.array([-np.dot(self.k_T, rho_vec)
+                              for rho_vec in soln.vec_soln[:-1]])
+        dMs = dWs + tr_c_c_rs * dts
+
+        return soln, dMs
+
+class Strong_0_5_HeterodyneLindbladIntegrator(UncondLindbladIntegrator):
+    r"""Template class for integrators of strong order >= 0.5.
+
+    Defines the most basic constructor shared by all integrators of Lindblad
+    heterodyne stochastic master equations of strong order >= 0.5.
+
+    Parameters
+    ----------
+    Ls : [numpy.array]
+        Lindblad operators,
+    H : numpy.array
+        The plant Hamiltonian
+    meas_L_idx: int
+        Index of the operator in Ls corresponding to the measurement Lindblad operator.
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+
+    """
+    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
+        super().__init__(Ls, H, basis, drift_rep, **kwargs)
+        L_meas_vec = self.L_vecs[meas_L_idx]
+        L_meas = Ls[meas_L_idx]
+        Id_vec = self.basis.vectorize(np.eye(L_meas.shape[0]))
+        self.G_1 = 2 * self.basis.make_real_sand_matrix(L_meas_vec/np.sqrt(2), Id_vec)
+        self.G_2 = 2 * self.basis.make_real_sand_matrix(-1j*L_meas_vec/np.sqrt(2), Id_vec)
+        self.k_T_1 = -2 * self.basis.dualize(L_meas/np.sqrt(2)).real
+        self.k_T_2 = -2 * self.basis.dualize(-1j*L_meas/np.sqrt(2)).real
+
+    def a_fn(self, t, rho_vec):
+        return self.Q @ rho_vec
+
+    def b_fn_1(self, t, rho_vec):
+        return (self.k_T_1 @ rho_vec) * rho_vec + self.G_1 @ rho_vec
+
+    def b_fn_2(self, t, rho_vec):
+        return (self.k_T_2 @ rho_vec) * rho_vec + self.G_2 @ rho_vec
+
+    def dW_fn_1(self, dM_1, dt, rho, t):
+        return dM_1 + np.dot(self.k_T_1, rho) * dt
+
+    def dW_fn_2(self, dM_2, dt, rho, t):
+        return dM_2 + np.dot(self.k_T_2, rho) * dt
+
+    def b_fn_tr_non_pres_1(self, t, rho_vec):
+        return self.G_1 @ rho_vec
+
+    def b_fn_tr_non_pres_2(self, t, rho_vec):
+        return self.G_2 @ rho_vec
+
+    def integrate(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        raise NotImplementedError()
+
+    def integrate_tr_non_pres(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        raise NotImplementedError()
+
+    def gen_meas_record(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        r"""Simulate a measurement record.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise), returning a measurement record along
+        with the trajectory.
+
+        The incremental measurement outcomes making up the measurement record
+        are related to the white noise increments and instantaneous state in
+        the following way:
+
+        .. math::
+
+           dM_t^1=dW_t^1-\operatorname{tr}[(c+c^\dagger)\rho_t]
+
+        .. math::
+
+           dM_t^2=dW_t^2-\operatorname{tr}[-i(c-c^\dagger)\rho_t]
+
+        Parameters
+        ----------
+        rho_0 : numpy.array of complex float
+            The initial state of the system as a Hermitian matrix
+        times : numpy.array of real float
+            A sequence of time points for which to solve for rho
+        U1s: numpy.array of real float
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories. ``U1s.shape`` is
+            assumed to be ``(len(times) - 1,)``.
+
+        Returns
+        -------
+        tuple of Solution and numpy.array and numpy.array
+            The components of the vecorized :math:`\rho` for all specified
+            times
+            and an array of incremental measurement outcomes for the first quadrature
+            and the same for the second quadrature
+
+        """
+        if U1s_1 is None:
+            U1s_1 = np.random.randn(len(times) -1)
+        if U1s_2 is None:
+            U1s_2 = np.random.randn(len(times) -1)
+        if U2s_1 is None:
+            U2s_1 = np.random.randn(len(times) -1)
+        if U2s_2 is None:
+            U2s_2 = np.random.randn(len(times) -1)
+
+        soln = self.integrate(rho_0, times, U1s_1, U1s_2, U2s_1, U2s_2)
+
+        dts = times[1:] - times[:-1]
+        dWs_1 = np.sqrt(dts) * U1s_1
+        dWs_2 = np.sqrt(dts) * U1s_2
+        tr_c_c_rs = np.array([-np.dot(self.k_T_1, rho_vec)
+                              for rho_vec in soln.vec_soln[:-1]])
+        tr_ic_c_rs = np.array([-np.dot(self.k_T_2, rho_vec)
+                              for rho_vec in soln.vec_soln[:-1]])
+        dMs_1 = dWs_1 + tr_c_c_rs * dts
+        dMs_2 = dWs_2 + tr_ic_c_rs * dts
+
+        return soln, dMs_1, dMs_2
+
+class Strong_1_0_HeterodyneLindbladIntegrator(Strong_0_5_HeterodyneLindbladIntegrator):
+    r"""Template class for integrators of strong order >= 1.
+
+    Defines the most basic constructor shared by all integrators of Lindblad
+    heterodyne stochastic master equations of strong order >= 1.
+
+    Parameters
+    ----------
+    Ls : [numpy.array]
+        Lindblad operators,
+    H : numpy.array
+        The plant Hamiltonian
+    meas_L_idx: int
+        Index of the operator in Ls corresponding to the measurement Lindblad operator.
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+
+    """
+    def __init__(self, Ls, H, meas_L_idx, basis=None, drift_rep=None, **kwargs):
+        super(Strong_1_0_HeterodyneLindbladIntegrator, self).__init__(Ls, H, meas_L_idx,
+                                                                      basis, drift_rep, **kwargs)
+
+        self.k_T_1_G_1 = np.dot(self.k_T_1, self.G_1)
+        self.k_T_1_G_2 = np.dot(self.k_T_1, self.G_2)
+        self.k_T_2_G_1 = np.dot(self.k_T_2, self.G_1)
+        self.k_T_2_G_2 = np.dot(self.k_T_2, self.G_2)
+
+        self.G_1_G_1 = np.dot(self.G_1, self.G_1)
+        self.G_1_G_2 = np.dot(self.G_1, self.G_2)
+        self.G_2_G_1 = np.dot(self.G_2, self.G_1)
+        self.G_2_G_2 = np.dot(self.G_2, self.G_2)
+
 class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
     r"""Euler integrator for the conditional Gaussian master equation.
 
@@ -1141,6 +1401,147 @@ class EulerHomodyneIntegrator(Strong_0_5_HomodyneIntegrator):
         vec_soln = sde.meas_euler(self.a_fn, self.b_fn, self.dW_fn, rho_0_vec,
                                   times, dMs)
         return Solution(vec_soln, self.basis)
+
+class EulerHeterodyneIntegrator(Strong_0_5_HeterodyneLindbladIntegrator):
+    r"""Euler integrator for the Lindblad heterodyne master equation.
+
+    Parameters
+    ----------
+    Ls : [numpy.array]
+        Lindblad operators,
+    H : numpy.array
+        The plant Hamiltonian
+    meas_L_idx: int
+        Index of the operator in Ls corresponding to the measurement Lindblad operator.
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+
+    """
+
+    def integrate(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise).
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s_1: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+            For the first process, i.e. the first quadrature.
+        U1s_2: numpy.array(len(times) - 1)
+            Same as ``U1s_1`` but for the second quadrature.
+        U2s_1: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the first quadrature.
+        U2s_2: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the second quadrature.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s_1 is None:
+            U1s_1 = np.random.randn(len(times) -1)
+        if U1s_2 is None:
+            U1s_2 = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler_heterodyne(self.a_fn, self.b_fn_1, self.b_fn_2,
+                                        rho_0_vec, times, U1s_1, U1s_2)
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def integrate_tr_non_pres(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise). Integrates the linear equation,
+        which ignores the tr[(c + cdag) rho] rho term and therefore decreases
+        the trace.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s_1: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+            For the first process, i.e. the first quadrature.
+        U1s_2: numpy.array(len(times) - 1)
+            Same as ``U1s_1`` but for the second quadrature.
+        U2s_1: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the first quadrature.
+        U2s_2: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the second quadrature.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s_1 is None:
+            U1s_1 = np.random.randn(len(times) -1)
+        if U1s_2 is None:
+            U1s_2 = np.random.randn(len(times) -1)
+
+        vec_soln = sde.euler_heterodyne(self.a_fn, self.b_fn_tr_non_pres_1, self.b_fn_tr_non_pres_2,
+                                        rho_0_vec, times, U1s_1, U1s_2)
+        # TODO: Having a difference between the basis stored by the Lindblad
+        # integrators and that stored by the Gaussian integrators is also not
+        # ideal. Eventually it would be nice for everything to be one of these
+        # Lindblad integrators and have methods for constructing the Gaussian
+        # versions from the relevant Gaussian parameters.
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def integrate_measurements(self, rho_0, times, dMs_1, dMs_2):
+        r"""Integrate system evolution conditioned on a measurement record.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        dMs_1: numpy.array(len(times) - 1)
+            Incremental measurement outcomes used to drive the SDE for the
+            first quadrature.
+        dMs_2: numpy.array(len(times) - 1)
+            Same as ``dMs_1``, but for the second measured quadrature.
+
+        Returns
+        -------
+        Solution
+            The components of the vecorized :math:`\rho` for all specified
+            times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+
+        vec_soln = sde.meas_euler_heterodyne(self.a_fn, self.b_fn_1, self.b_fn_2, self.dW_fn_1, self.dW_fn_2,
+                                             rho_0_vec, times, dMs_1, dMs_2)
+        return Solution(vec_soln, self.basis.basis.todense())
 
 class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
     r"""Milstein integrator for the conditional Gaussian master equation.
@@ -1272,6 +1673,162 @@ class MilsteinHomodyneIntegrator(Strong_1_0_HomodyneIntegrator):
         vec_soln = sde.meas_milstein(self.a_fn, self.b_fn, self.b_dx_b_fn,
                                      self.dW_fn, rho_0_vec, times, dMs)
         return Solution(vec_soln, self.basis)
+
+class MilsteinHeterodyneIntegrator(Strong_1_0_HeterodyneLindbladIntegrator):
+    r"""Milstein integrator for the heterodyne master equation.
+
+    Parameters
+    ----------
+    Ls : [numpy.array]
+        Lindblad operators,
+    H : numpy.array
+        The plant Hamiltonian
+    meas_L_idx: int
+        Index of the operator in Ls corresponding to the measurement Lindblad operator.
+    basis : list of numpy.array, optional
+        The Hermitian basis to vectorize the operators in terms of (with the
+        component proportional to the identity in last place). If no basis is
+        provided the generalized Gell-Mann basis will be used.
+    drift_rep : numpy.array, optional
+        The real matrix Q that acts on the vectorized rho as the deterministic
+        evolution operator. Will save computation time if already known and
+        don't need to calculate from `c_op`, `M_sq`, `N`, and `H`.
+
+    """
+
+    def bi_dx_bj_fn(self, rho, t, i, j):
+        '''Computes the last term of the milstein integration scheme.
+
+        '''
+        if i==1 and j==1:
+            return bi_dx_bj(self.G_1, self.G_1, self.G_1_G_1, self.k_T_1, self.k_T_1, self.k_T_1_G_1, rho)
+        elif i==1 and j==2:
+            return bi_dx_bj(self.G_1, self.G_2, self.G_2_G_1, self.k_T_1, self.k_T_2, self.k_T_2_G_1, rho)
+        elif i==2 and j==1:
+            return bi_dx_bj(self.G_2, self.G_1, self.G_1_G_2, self.k_T_2, self.k_T_1, self.k_T_1_G_2, rho)
+        elif i==2 and j==2:
+            return bi_dx_bj(self.G_2, self.G_2, self.G_2_G_2, self.k_T_2, self.k_T_2, self.k_T_2_G_2, rho)
+
+    def integrate(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise).
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s_1: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+            For the first process, i.e. the first quadrature.
+        U1s_2: numpy.array(len(times) - 1)
+            Same as ``U1s_1`` but for the second quadrature.
+        U2s_1: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the first quadrature.
+        U2s_2: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the second quadrature.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s_1 is None:
+            U1s_1 = np.random.randn(len(times) -1)
+        if U1s_2 is None:
+            U1s_2 = np.random.randn(len(times) -1)
+
+        vec_soln = sde.milstein_heterodyne(self.a_fn, self.b_fn_1, self.b_fn_2,
+                                           self.bi_dx_bj_fn, rho_0_vec, times, U1s_1, U1s_2)
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def integrate_tr_non_pres(self, rho_0, times, U1s_1=None, U1s_2=None, U2s_1=None, U2s_2=None):
+        r"""Integrate the initial value problem.
+
+        Integrate for a sequence of times with a given initial condition (and
+        optionally specified white noise). Integrates the linear equation,
+        which ignores the tr[(c + cdag) rho] rho term and therefore decreases
+        the trace.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        U1s_1: numpy.array(len(times) - 1)
+            Samples from a standard-normal distribution used to construct
+            Wiener increments :math:`\Delta W` for each time interval. Multiple
+            rows may be included for independent trajectories.
+            For the first process, i.e. the first quadrature.
+        U1s_2: numpy.array(len(times) - 1)
+            Same as ``U1s_1`` but for the second quadrature.
+        U2s_1: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the first quadrature.
+        U2s_2: numpy.array(len(times) - 1)
+            Unused, included to make the argument list uniform with
+            higher-order integrators. For the second quadrature.
+
+        Returns
+        -------
+        Solution
+            The state of :math:`\rho` for all specified times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+        if U1s_1 is None:
+            U1s_1 = np.random.randn(len(times) -1)
+        if U1s_2 is None:
+            U1s_2 = np.random.randn(len(times) -1)
+
+        vec_soln = sde.milstein_heterodyne(self.a_fn, self.b_fn_tr_non_pres_1, self.b_fn_tr_non_pres_2,
+                                           self.bi_dx_bj_fn, rho_0_vec, times, U1s_1, U1s_2)
+        # TODO: Having a difference between the basis stored by the Lindblad
+        # integrators and that stored by the Gaussian integrators is also not
+        # ideal. Eventually it would be nice for everything to be one of these
+        # Lindblad integrators and have methods for constructing the Gaussian
+        # versions from the relevant Gaussian parameters.
+        return Solution(vec_soln, self.basis.basis.todense())
+
+    def integrate_measurements(self, rho_0, times, dMs_1, dMs_2):
+        r"""Integrate system evolution conditioned on a measurement record.
+
+        Parameters
+        ----------
+        rho_0: numpy.array
+            The initial state of the system
+        times: numpy.array
+            A sequence of time points for which to solve for rho
+        dMs_1: numpy.array(len(times) - 1)
+            Incremental measurement outcomes used to drive the SDE for the
+            first quadrature.
+        dMs_2: numpy.array(len(times) - 1)
+            Same as ``dMs_1``, but for the second measured quadrature.
+
+        Returns
+        -------
+        Solution
+            The components of the vecorized :math:`\rho` for all specified
+            times
+
+        """
+        rho_0_vec = self.basis.vectorize(rho_0, dense=True).real
+
+        vec_soln = sde.meas_milstein_heterodyne(self.a_fn, self.b_fn_1, self.b_fn_2, self.dW_fn_1, self.dW_fn_2,
+                                                self.bi_dx_bj_fn,
+                                                rho_0_vec, times, dMs_1, dMs_2)
+
+        return Solution(vec_soln, self.basis.basis.todense())
 
 class Taylor_1_5_HomodyneIntegrator(Strong_1_5_HomodyneIntegrator):
     r"""Order 1.5 Taylor ntegrator for the conditional Gaussian master equation.
