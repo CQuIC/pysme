@@ -10,4 +10,5 @@ doc/_build/*
 __pycache__/*
 .ipynb_checkpoints
 *.pickle
+*.npy
 *.pdf
