@@ -12,3 +12,4 @@ __pycache__/*
 *.pickle
 *.npy
 *.pdf
+!notebooks/*.pickle
