@@ -11,3 +11,4 @@ __pycache__/*
 .ipynb_checkpoints
 *.pickle
 *.pdf
+!notebooks/*.pickle
