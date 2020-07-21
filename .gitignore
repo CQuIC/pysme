@@ -12,4 +12,9 @@ __pycache__/*
 *.pickle
 *.npy
 *.pdf
-!notebooks/*.pickle
+!notebooks/mollow-triplets/fluorsecence-spectra.pickle
+!notebooks/short_time_markov_WP_cmp_data.pickle
+!notebooks/long_time_markov_WP_cmp_data.pickle
+!notebooks/vacuum-collected-plot-data.pickle
+!notebooks/negativity-data.pickle
+
