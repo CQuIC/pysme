@@ -184,6 +184,32 @@ def test_system_builder():
     check_vectorize(c2_operators, mixed_basis2)
     check_vectorize(c3_operators, basis(3))
 
+    check_system_builder_double_comm_op()
+
+def check_system_builder_double_comm_op():
+    sx = np.array([[0, 1], [1, 0]], dtype=np.complex)
+    sm = np.array([[0, 0], [1, 0]], dtype=np.complex)
+    Id = np.eye(2, dtype=np.complex)
+    zero = np.zeros((2, 2), dtype=np.complex)
+    r = np.log(2)
+    N = np.sinh(r)**2
+    M = -np.sinh(r) * np.cosh(r)
+    H = zero
+    c_op = sm
+    c_op_dag = c_op.conjugate().T
+    rho0 = (Id + sx) / 2
+    integrator = integrate.UncondGaussIntegrator(c_op, M, N, H)
+    rho0_vec = sb.vectorize(rho0, integrator.basis)
+    partial_basis = integrator.basis[:-1]
+    common_dict = sb.op_calc_setup(c_op, M, N, H, partial_basis)
+    E = sb.double_comm_op(**common_dict)
+    vec_double_comm = E @ rho0_vec
+    matrix_double_comm = ((M / 2) * mf.comm(c_op_dag, mf.comm(c_op_dag, rho0))
+                          + (M.conjugate() / 2) * mf.comm(c_op,
+                                                          mf.comm(c_op, rho0)))
+    check_mat_eq(np.einsum('k,kmn->mn', vec_double_comm, integrator.basis),
+                 matrix_double_comm)
+
 def new_dW_from_dW(dW_2n, dW_2n_1):
     return dW_2n + dW_2n_1
 
@@ -337,15 +363,78 @@ def test_against_matrix_implementation():
                    for j in range(test_errors.shape[0])]
     assert_almost_equal(max(error_norms), 0.0, 7)
 
+def test_against_t1_t2_matrix_euler_test_vector():
+    with open('tests/t1-t2-matrix-euler-test-vector.npz', 'rb') as f:
+        test_vec = np.load(f)
+        Ls = test_vec['Ls']
+        H = test_vec['H']
+        rho0 = test_vec['rho0']
+        times = test_vec['times']
+        loaded_rhos = test_vec['rhos']
+    integrator = integrate.UncondLindbladIntegrator(Ls, H)
+    soln = integrator.integrate(rho0, times)
+    rhos = soln.get_density_matrices()
+    errors = rhos - loaded_rhos
+    error_norms = [sb.norm_squared(errors[j])
+                   for j in range(errors.shape[0])]
+    # Normally I'm checking to 7 decimal places, but my Euler integrator
+    # seems to only be able to get within 6 decimal places of the vectorized
+    # solution. Maybe I'll bother to get an analytic expression one of these
+    # days.
+    assert_almost_equal(max(error_norms), 0.0, 6)
+
+def test_against_random_spin1_matrix_euler_test_vector():
+    with open('tests/random-spin1-matrix-euler-test-vector.npz', 'rb') as f:
+        test_vec = np.load(f)
+        Ls = test_vec['Ls']
+        H = test_vec['H']
+        rho0 = test_vec['rho0']
+        times = test_vec['times']
+        loaded_rhos = test_vec['rhos']
+    integrator = integrate.UncondLindbladIntegrator(Ls, H)
+    soln = integrator.integrate(rho0, times)
+    rhos = soln.get_density_matrices()
+    errors = rhos - loaded_rhos
+    error_norms = [sb.norm_squared(errors[j])
+                   for j in range(errors.shape[0])]
+    # Normally I'm checking to 7 decimal places, but my Euler integrator
+    # seems to only be able to get within 6 decimal places of the vectorized
+    # solution. Analytic solution for a random instance like this is probably
+    # not going to happen.
+    assert_almost_equal(max(error_norms), 0.0, 6)
+
+def test_against_random_spin1_gauss_matrix_euler_test_vector():
+    with open('tests/random-spin1-gauss-matrix-euler-test-vector.npz', 'rb') as f:
+        test_vec = np.load(f)
+        c_op = test_vec['c_op']
+        H = test_vec['H']
+        rho0 = test_vec['rho0']
+        times = test_vec['times']
+        loaded_rhos = test_vec['rhos']
+        N = float(test_vec['N'])
+        M = complex(test_vec['M'])
+    integrator = integrate.UncondGaussIntegrator(c_op, M, N, H)
+    soln = integrator.integrate(rho0, times)
+    rhos = soln.get_density_matrices()
+    errors = rhos - loaded_rhos
+    error_norms = [sb.norm_squared(errors[j])
+                   for j in range(errors.shape[0])]
+    # Normally I'm checking to 7 decimal places, but my Euler integrator
+    # seems to only be able to get within 6 decimal places of the vectorized
+    # solution. Analytic solution for a random instance like this is probably
+    # not going to happen.
+    assert_almost_equal(max(error_norms), 0.0, 6)
+
 def check_sparse_vectorization(sparse_basis, ops):
     for op in ops:
         op_there_back = sparse_basis.matrize(sparse_basis.vectorize(op))
-        assert_almost_equal(np.abs(op - op_there_back).max(), 0.0, 7)
+        assert_almost_equal(np.abs(op - op_there_back.todense()).max(), 0.0, 7)
 
 def check_sparse_duals(sparse_basis, ops):
     for op1, op2 in it.product(ops, ops):
         tr = np.trace(op1.conj().T @ op2)
-        ip = np.dot(sparse_basis.dualize(op1), sparse_basis.vectorize(op2))
+        ip = np.dot(sparse_basis.dualize(op1, dense=True),
+                    sparse_basis.vectorize(op2, dense=True))
         assert_almost_equal(np.abs(tr - ip), 0.0, 7)
 
 def check_sparse_real_sand(sparse_basis, X, rho, Y):
@@ -356,7 +445,8 @@ def check_sparse_real_sand(sparse_basis, X, rho, Y):
     real_sand_matrix = sparse_basis.make_real_sand_matrix(x_vec, y_vec)
     real_sand_vec = COO.from_numpy(real_sand_matrix @ rho_vec.todense())
     assert_almost_equal(np.abs(dense_real_sand -
-                               sparse_basis.matrize(real_sand_vec)).max(),
+                               sparse_basis.matrize(real_sand_vec).todense())
+                        .max(),
                         0.0, 7)
 
 def check_sparse_real_comm(sparse_basis, X, rho, Y):
@@ -368,7 +458,8 @@ def check_sparse_real_comm(sparse_basis, X, rho, Y):
     real_comm_matrix = sparse_basis.make_real_comm_matrix(x_vec, y_vec)
     real_comm_vec = COO.from_numpy(real_comm_matrix @ rho_vec.todense())
     assert_almost_equal(np.abs(dense_real_comm -
-                               sparse_basis.matrize(real_comm_vec)).max(),
+                               sparse_basis.matrize(real_comm_vec).todense())
+                        .max(),
                         0.0, 7)
 
 def check_sparse_hamil_comm(sparse_basis, H, rho):
@@ -378,7 +469,8 @@ def check_sparse_hamil_comm(sparse_basis, H, rho):
     hamil_comm_matrix = sparse_basis.make_hamil_comm_matrix(h_vec)
     hamil_comm_vec = COO.from_numpy(hamil_comm_matrix @ rho_vec.todense())
     assert_almost_equal(np.abs(dense_hamil_comm -
-                               sparse_basis.matrize(hamil_comm_vec)).max(),
+                               sparse_basis.matrize(hamil_comm_vec).todense())
+                        .max(),
                         0.0, 7)
 
 def check_trivial_construction():

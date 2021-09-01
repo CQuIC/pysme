@@ -23,34 +23,57 @@ def sparse_imag(sparse_array):
     return (sparse_array - np.conj(sparse_array)) / 2.j
 
 class SparseBasis:
-    def __init__(self, dim):
-        self.dim = dim
-        self.basis = COO.from_numpy(np.array(gm.get_basis(dim)))
-        self.sq_norms = COO.from_numpy(np.einsum('jmn,jnm->j',
-                                                 self.basis.todense(),
-                                                 self.basis.todense()))
+    def __init__(self, dim, basis=None):
+        if basis is None:
+            self.dim = dim
+            self.basis = sparse.stack(gm.get_basis(dim, sparse=True))
+        else:
+            self.dim = basis[0].shape[0]
+            self.basis = COO.from_numpy(np.array(basis))
+        # Diagonal metric (since we're working with what are assumed to be
+        # orthogonal but not necessarily normalized basis vectors)
+        self.sq_norms = COO.from_numpy(
+                sparse.tensordot(
+                    self.basis, self.basis,
+                    ([1, 2], [2, 1])).to_scipy_sparse().diagonal())
+        # Diagonal inverse metric
         sq_norms_inv = COO.from_numpy(1 / self.sq_norms.todense())
+        # Dual basis obtained from the original basis by the inverse metric
         self.dual = self.basis * sq_norms_inv[:,None,None]
+        # Structure coefficients for the Lie algebra showing how to represent a
+        # product of two basis elements as a complex-linear combination of basis
+        # elements
         self.struct = sparse.tensordot(sparse.tensordot(self.basis, self.basis,
                                                         ([2], [1])),
                                        self.dual, ([1, 3], [2, 1]))
-        if type(self.struct) == np.ndarray:
+        if isinstance(self.struct, np.ndarray):
             # Sometimes sparse.tensordot returns numpy arrays. We want to force
             # it to be sparse, since sparse.tensordot fails when passed two
             # numpy arrays.
             self.struct = COO.from_numpy(self.struct)
 
-    def vectorize(self, op):
+    def vectorize(self, op, dense=False):
         sparse_op = COO.from_numpy(op)
         result = sparse.tensordot(self.dual, sparse_op, ([1,2], [1,0]))
-        if type(result) == np.ndarray:
+        if not dense and isinstance(result, np.ndarray):
             # I want the result stored in a sparse format even if it isn't
             # sparse.
             result = COO.from_numpy(result)
+        elif dense and isinstance(result, sparse.COO):
+            result = result.todense()
         return result
 
-    def dualize(self, op):
-        return np.conj(self.vectorize(op)) * self.sq_norms
+    def dualize(self, op, dense=True):
+        sparse_op = COO.from_numpy(op)
+        result = np.conj(sparse.tensordot(self.basis, sparse_op,
+                                          ([1,2], [1,0])))
+        if not dense and isinstance(result, np.ndarray):
+            # I want the result stored in a sparse format even if it isn't
+            # sparse.
+            result = COO.from_numpy(result)
+        elif dense and isinstance(result, sparse.COO):
+            result = result.todense()
+        return result
 
     def matrize(self, vec):
         """Take a (sparse) vectorized operator and return it in matrix form.
@@ -72,22 +95,21 @@ class SparseBasis:
         x and y are vectorized representations of the operators X and Y stored
         in sparse format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        The result is a dense matrix.
 
         """
         result_A = sparse.tensordot(x, self.struct, ([0], [0]))
         result_B = sparse.tensordot(np.conj(y), self.struct, ([0], [1]))
         # sparse.tensordot fails if both arguments are numpy ndarrays, so we
         # force the intermediate arrays to be sparse
-        if type(result_B) == np.ndarray:
+        if isinstance(result_B, np.ndarray):
             result_B = COO.from_numpy(result_B)
-        if type(result_A) == np.ndarray:
+        if isinstance(result_A, np.ndarray):
             result_A = COO.from_numpy(result_A)
         result = sparse_real(sparse.tensordot(result_A, result_B, ([0], [1])))
         # We want our result to be dense, to make things predictable from the
         # outside.
-        if type(result) == sparse.coo.COO:
+        if isinstance(result, sparse.COO):
             result = result.todense()
         return result.real
 
@@ -105,8 +127,7 @@ class SparseBasis:
         x and y are vectorized representations of the operators X and Y stored
         in sparse format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        The result is a dense matrix.
 
         """
         struct_imag = sparse_imag(self.struct)
@@ -114,15 +135,15 @@ class SparseBasis:
         # force the intermediate arrays to be sparse
         result_A = sparse.tensordot(np.conj(y), struct_imag, ([0], [1]))
         result_B = sparse.tensordot(x, self.struct, ([0], [0]))
-        if type(result_B) == np.ndarray:
+        if isinstance(result_B, np.ndarray):
             result_B = COO.from_numpy(result_B)
-        if type(result_A) == np.ndarray:
+        if isinstance(result_A, np.ndarray):
             result_A = COO.from_numpy(result_A)
         result = -2 * sparse_imag(sparse.tensordot(result_A, result_B,
                                                    ([0], [1])))
         # We want our result to be dense, to make things predictable from the
         # outside.
-        if type(result) == sparse.coo.COO:
+        if isinstance(result, sparse.COO):
             result = result.todense()
         return result.real
 
@@ -134,8 +155,7 @@ class SparseBasis:
         x is the vectorized representation of the operator X stored in sparse
         format.
 
-        `sparse.tensordot` might decide to return something dense, so the user
-        should be aware of that.
+        The result is a dense matrix.
 
         """
         return self.make_real_comm_matrix(x, x)
@@ -148,14 +168,28 @@ class SparseBasis:
         h is the vectorized representation of the Hamiltonian H stored in sparse
         format.
 
-        Returns a dense matrix.
+        The result is a dense matrix.
 
         """
         struct_imag = sparse_imag(self.struct)
         result = 2 * sparse.tensordot(struct_imag, h, ([0], [0])).T
-        if type(result) == sparse.coo.COO:
+        if isinstance(result, sparse.COO):
             result = result.todense()
         return result.real
+
+    def make_double_comm_matrix(self, x, M):
+        """Make the superoperator matrix representation of
+
+        (M/2)[X†,[X†,rho]] + (M*/2)[X,[X,rho]]
+
+        x is the vectorized representation of the operator X stored in sparse
+        format.
+
+        The result is a dense matrix.
+
+        """
+        return -(self.make_real_comm_matrix(M * np.conj(x), x) +
+                 self.make_real_comm_matrix(x, M * np.conj(x)))
 
     def make_wiener_linear_matrix(self, x):
         Id_vec = self.vectorize(np.eye(self.dim))

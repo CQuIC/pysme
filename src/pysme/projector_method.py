@@ -64,10 +64,12 @@ def rho_dot_conv(rho_combined, c, r, mu, gamma, xi):
     rho_tilde_dag = rho_tilde.conjugate().T
     xi_star = xi.conjugate()
     rho_dot = gamma * (mf.D(c, rho) - np.sinh(r) * np.cosh(r) *
-        (double_comm_non_herm(c_dag, rho_tilde_dag, xi_star, -mu) +
-            double_comm_non_herm(c, rho_tilde, xi, mu)) + np.sinh(r)**2 *
-        (D_non_herm(c, rho_tilde, xi) +
-            D_non_herm(c_dag, rho_tilde_dag, xi_star)))
+                       (double_comm_non_herm(c_dag, rho_tilde_dag, xi_star,
+                                             -mu) +
+                        double_comm_non_herm(c, rho_tilde, xi, mu)) +
+                       np.sinh(r)**2 * (D_non_herm(c, rho_tilde, xi) +
+                                        D_non_herm(c_dag, rho_tilde_dag,
+                                                   xi_star)))
     rho_tilde_dot = xi * rho
     return CompositeState([rho_dot, rho_tilde_dot])
 
@@ -95,10 +97,12 @@ def rho_dot_convless(rho_combined, c, r, mu, gamma, xi):
     xi_tilde_star = xi_tilde.conjugate()
     xi_star = xi.conjugate()
     rho_dot = gamma * (mf.D(c, rho) - np.sinh(r) * np.cosh(r) *
-        (double_comm_non_herm(c_dag, xi_tilde_star * rho, xi_star, -mu) +
-            double_comm_non_herm(c, xi_tilde * rho, xi, mu)) + np.sinh(r)**2 *
-        (D_non_herm(c, xi_tilde * rho, xi) +
-            D_non_herm(c_dag, xi_tilde_star * rho, xi_star)))
+                       (double_comm_non_herm(c_dag, xi_tilde_star * rho,
+                                             xi_star, -mu) +
+                        double_comm_non_herm(c, xi_tilde * rho, xi, mu)) +
+                       np.sinh(r)**2 * (D_non_herm(c, xi_tilde * rho, xi) +
+                                        D_non_herm(c_dag, xi_tilde_star * rho,
+                                                   xi_star)))
     xi_tilde_dot = xi
     return CompositeState([rho_dot, xi_tilde_dot])
 

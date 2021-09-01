@@ -16,13 +16,12 @@ try:
 except ImportError:
     import warnings
     warnings.warn(
-            "Could not import qinfer. "
-            "Sequential Monte Carlo support will be disabled."
-            )
+        "Could not import qinfer. "
+        "Sequential Monte Carlo support will be disabled."
+        )
     qi = None
 
-def precomp_fn(coupling_op, M_sq, N, H0, partial_basis,
-               **kwargs):
+def precomp_fn(coupling_op, M_sq, N, H0, partial_basis, **kwargs):
     common_dict = sb.op_calc_setup(coupling_op, M_sq, N, H0, partial_basis)
     D_c = sb.diffusion_op(**common_dict)
     conjugate_dict = common_dict.copy()
@@ -30,17 +29,15 @@ def precomp_fn(coupling_op, M_sq, N, H0, partial_basis,
     D_c_dag = sb.diffusion_op(**conjugate_dict)
     E = sb.double_comm_op(**common_dict)
     F0 = sb.hamiltonian_op(**common_dict)
-    
-    Q_minus_F = (N + 1) * D_c + N * D_c_dag + E
-    G, k_T = sb.weiner_op(**common_dict)
 
-    return_vals = {
-                   'Q_minus_F': Q_minus_F,
+    Q_minus_F = (N + 1) * D_c + N * D_c_dag + E
+    G, k_T = sb.wiener_op(**common_dict)
+
+    return_vals = {'Q_minus_F': Q_minus_F,
                    'F0': F0,
-                   'diffusion_reps': {'G': G, 'k_T': k_T}
-                  }
-    more_vals ={'c_op': coupling_op, 'M_sq': M_sq, 'N': N,
-                'H': H0, 'partial_basis': partial_basis}
+                   'diffusion_reps': {'G': G, 'k_T': k_T}}
+    more_vals = {'c_op': coupling_op, 'M_sq': M_sq, 'N': N,
+                 'H': H0, 'partial_basis': partial_basis}
     return_vals.update(more_vals)
     return return_vals
 
